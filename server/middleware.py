@@ -17,6 +17,36 @@ class DecimalEncoder(json.JSONEncoder):
             return float(obj)
         return super(DecimalEncoder, self).default(obj)
 
+def generate_token(user_id, name, is_admin):
+    """Generate a JWT token for authentication"""
+    payload = {
+        "sub": str(user_id),  # Ensure user_id is converted to string
+        "name": name,
+        "is_admin": is_admin,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)
+    }
+    
+    print(f"Generating token with payload: {payload}")
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
+def verify_token(token):
+    """Verify a JWT token"""
+    try:
+        print(f"Verifying token: {token[:20]}...")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        print(f"Token decoded successfully: {payload}")
+        return payload
+    except jwt.ExpiredSignatureError:
+        print("Token verification failed: Token expired")
+        return {"error": "Token expired"}
+    except jwt.InvalidTokenError as e:
+        print(f"Token verification failed: Invalid token - {str(e)}")
+        return {"error": f"Invalid token: {str(e)}"}
+    except Exception as e:
+        print(f"Unexpected error during token verification: {str(e)}")
+        return {"error": f"Token verification error: {str(e)}"}
+
 def extract_auth_token(handler):
     """Extract token from Authorization header
     
@@ -54,7 +84,6 @@ def auth_required(handler_method):
             self.wfile.write(b'{"error": "Authentication required"}')
             return None
         
-        from auth import verify_token  # Import here to avoid circular imports
         payload = verify_token(token)
         if isinstance(payload, dict) and "error" in payload:
             self._set_response(401)
@@ -78,7 +107,6 @@ def admin_required(handler_method):
             self.wfile.write(b'{"error": "Authentication required"}')
             return None
         
-        from auth import verify_token  # Import here to avoid circular imports
         payload = verify_token(token)
         if isinstance(payload, dict) and "error" in payload:
             self._set_response(401)
