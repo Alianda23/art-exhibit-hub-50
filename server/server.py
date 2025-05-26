@@ -33,6 +33,25 @@ def ensure_uploads_directory():
 # Call this function to ensure directory exists
 ensure_uploads_directory()
 
+# Create a default placeholder.svg if it doesn't exist
+def create_placeholder_svg():
+    placeholder_path = os.path.join(os.path.dirname(__file__), "static", "placeholder.svg")
+    if not os.path.exists(placeholder_path):
+        try:
+            # Create a simple SVG placeholder
+            svg_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#f3f4f6"/>
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="18" fill="#9ca3af" text-anchor="middle" dy=".3em">
+    Image Not Available
+  </text>
+</svg>'''
+            with open(placeholder_path, "w") as f:
+                f.write(svg_content)
+            print(f"Created placeholder.svg at: {placeholder_path}")
+        except Exception as e:
+            print(f"Failed to create placeholder.svg: {e}")
+
 # Create a default exhibition image if it doesn't exist
 def create_default_exhibition_image():
     default_image_path = os.path.join(os.path.dirname(__file__), "static", "uploads", "default_exhibition.jpg")
@@ -55,7 +74,8 @@ def create_default_exhibition_image():
         except Exception as e:
             print(f"Failed to create default exhibition image: {e}")
 
-# Call this function to ensure the default exhibition image exists
+# Call these functions to ensure the files exist
+create_placeholder_svg()
 create_default_exhibition_image()
 
 # Custom JSON encoder to handle Decimal types
@@ -166,9 +186,19 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         try:
             # Check if file exists
             if not os.path.exists(file_path):
-                self.send_response(404)
-                self.end_headers()
-                return
+                # If requesting placeholder.svg specifically, serve it from static directory
+                if file_path.endswith('placeholder.svg'):
+                    placeholder_path = os.path.join(os.path.dirname(__file__), "static", "placeholder.svg")
+                    if os.path.exists(placeholder_path):
+                        file_path = placeholder_path
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+                        return
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
                 
             # Determine the content type
             content_type, _ = mimetypes.guess_type(file_path)
@@ -202,6 +232,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             file_path = os.path.join(os.path.dirname(__file__), path[1:])
             # Debugging info
             print(f"Serving static file: {file_path}")
+            self.serve_static_file(file_path)
+            return
+        
+        # Handle placeholder.svg specifically
+        elif path == '/placeholder.svg':
+            file_path = os.path.join(os.path.dirname(__file__), "static", "placeholder.svg")
+            print(f"Serving placeholder.svg from: {file_path}")
             self.serve_static_file(file_path)
             return
         
@@ -963,7 +1000,8 @@ def main():
     # Create uploads directory if it doesn't exist
     ensure_uploads_directory()
     
-    # Create default exhibition image
+    # Create placeholder and default images
+    create_placeholder_svg()
     create_default_exhibition_image()
     
     # Create an HTTP server
