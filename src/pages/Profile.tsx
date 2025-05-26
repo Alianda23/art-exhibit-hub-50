@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,10 @@ const Profile = () => {
 
   useEffect(() => {
     if (currentUser) {
+      console.log('Profile: Current user found, fetching orders for user:', currentUser);
       fetchUserOrders();
+    } else {
+      console.log('Profile: No current user found');
     }
   }, [currentUser]);
 
@@ -55,25 +57,47 @@ const Profile = () => {
   }
 
   const fetchUserOrders = async () => {
-    if (!currentUser.id) return;
+    if (!currentUser.id) {
+      console.log('Profile: No user ID available');
+      return;
+    }
     
+    console.log('Profile: Starting to fetch orders for user ID:', currentUser.id);
     setLoading(true);
     try {
       const response = await getUserOrders(currentUser.id);
-      console.log("User orders response:", response);
+      console.log("Profile: User orders response:", response);
+      
+      if (response.error) {
+        console.error('Profile: Error in response:', response.error);
+        toast({
+          title: "Error",
+          description: response.error || "Failed to load your orders and bookings",
+          variant: "destructive"
+        });
+        return;
+      }
       
       if (response.orders) {
+        console.log('Profile: Setting orders:', response.orders);
         setOrders(response.orders);
+      } else {
+        console.log('Profile: No orders in response');
+        setOrders([]);
       }
       
       if (response.bookings) {
+        console.log('Profile: Setting bookings:', response.bookings);
         setBookings(response.bookings);
+      } else {
+        console.log('Profile: No bookings in response');
+        setBookings([]);
       }
     } catch (error) {
-      console.error('Error fetching user orders:', error);
+      console.error('Profile: Error fetching user orders:', error);
       toast({
         title: "Error",
-        description: "Failed to load your orders and bookings",
+        description: "Failed to load your orders and bookings. Please check if the server is running.",
         variant: "destructive"
       });
     } finally {
@@ -179,6 +203,17 @@ const Profile = () => {
           <TabsContent value="bookings" className="p-6">
             <h2 className="text-xl font-serif font-semibold mb-4">Your Exhibition Bookings</h2>
             
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                Debug Info: Found {bookings.length} bookings. Loading: {loading ? 'Yes' : 'No'}
+              </p>
+              {bookings.length > 0 && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Booking IDs: {bookings.map(b => b.id).join(', ')}
+                </p>
+              )}
+            </div>
+            
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gold" />
@@ -231,6 +266,9 @@ const Profile = () => {
             ) : (
               <div className="text-center py-10">
                 <p className="text-gray-600">You haven't booked any exhibitions yet.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  If you believe this is incorrect, please check if the server is running at localhost:8000
+                </p>
                 <Button 
                   className="mt-4 bg-gold hover:bg-gold-dark text-white"
                   onClick={() => navigate('/exhibitions')}
@@ -243,6 +281,17 @@ const Profile = () => {
 
           <TabsContent value="orders" className="p-6">
             <h2 className="text-xl font-serif font-semibold mb-4">Your Artwork Orders</h2>
+            
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                Debug Info: Found {orders.length} orders. Loading: {loading ? 'Yes' : 'No'}
+              </p>
+              {orders.length > 0 && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Order IDs: {orders.map(o => o.id).join(', ')}
+                </p>
+              )}
+            </div>
             
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -300,6 +349,9 @@ const Profile = () => {
             ) : (
               <div className="text-center py-10">
                 <p className="text-gray-600">You haven't purchased any artworks yet.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  If you believe this is incorrect, please check if the server is running at localhost:8000
+                </p>
                 <Button 
                   className="mt-4 bg-gold hover:bg-gold-dark text-white"
                   onClick={() => navigate('/artworks')}
