@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -42,29 +43,50 @@ const Profile = () => {
   const [bookings, setBookings] = useState<UserBooking[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Enhanced debugging for authentication and user state
   useEffect(() => {
+    console.log('Profile: useEffect triggered. Current user state:', {
+      currentUser,
+      hasCurrentUser: !!currentUser,
+      currentUserId: currentUser?.id,
+      currentUserName: currentUser?.name,
+      isAuthenticated: !!currentUser
+    });
+    
+    console.log('Profile: localStorage contents:', {
+      token: localStorage.getItem('token') ? 'EXISTS' : 'MISSING',
+      userId: localStorage.getItem('userId'),
+      adminId: localStorage.getItem('adminId'),
+      userName: localStorage.getItem('userName'),
+      isAuthenticated: !!localStorage.getItem('token')
+    });
+
     if (currentUser) {
       console.log('Profile: Current user found, fetching orders for user:', currentUser);
       fetchUserOrders();
     } else {
-      console.log('Profile: No current user found');
+      console.log('Profile: No current user found - user needs to login');
     }
   }, [currentUser]);
 
   if (!currentUser) {
+    console.log('Profile: Redirecting to login - no current user');
     navigate('/login');
     return null;
   }
 
   const fetchUserOrders = async () => {
+    console.log('Profile: fetchUserOrders called with currentUser:', currentUser);
+    
     if (!currentUser.id) {
-      console.log('Profile: No user ID available');
+      console.log('Profile: No user ID available. CurrentUser object:', currentUser);
       return;
     }
     
     console.log('Profile: Starting to fetch orders for user ID:', currentUser.id);
     setLoading(true);
     try {
+      console.log('Profile: About to call getUserOrders API...');
       const response = await getUserOrders(currentUser.id);
       console.log("Profile: User orders response:", response);
       
@@ -132,6 +154,30 @@ const Profile = () => {
     <div className="min-h-screen bg-secondary py-12 px-4">
       <div className="container mx-auto max-w-5xl">
         <h1 className="text-3xl font-serif font-bold mb-8">My Account</h1>
+
+        {/* Enhanced debug information */}
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-sm font-semibold text-red-800 mb-2">Authentication Debug Info:</h3>
+          <div className="text-xs text-red-700 space-y-1">
+            <p>Current User ID: {currentUser?.id || 'MISSING'}</p>
+            <p>Current User Name: {currentUser?.name || 'MISSING'}</p>
+            <p>Has Token: {localStorage.getItem('token') ? 'YES' : 'NO'}</p>
+            <p>localStorage userId: {localStorage.getItem('userId') || 'MISSING'}</p>
+            <p>localStorage adminId: {localStorage.getItem('adminId') || 'MISSING'}</p>
+            <p>fetchUserOrders called: Check console for logs</p>
+          </div>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="mt-2"
+            onClick={() => {
+              console.log('Manual fetch triggered');
+              fetchUserOrders();
+            }}
+          >
+            Manual Fetch Orders
+          </Button>
+        </div>
 
         <Tabs defaultValue="profile" onValueChange={setActiveTab} className="bg-white rounded-lg shadow-md">
           <TabsList className="grid w-full grid-cols-3 rounded-t-lg">
