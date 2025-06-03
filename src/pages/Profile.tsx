@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice, formatDate } from '@/utils/formatters';
 import { CalendarIcon, MapPinIcon, UserIcon, PhoneIcon, MailIcon, Loader2 } from 'lucide-react';
-import { generateExhibitionTicket } from '@/utils/mpesa';
+import { generateExhibitionTicket, authFetch } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 
 type UserOrder = {
@@ -71,25 +70,9 @@ const Profile = () => {
     console.log('Profile: Starting to fetch orders for user ID:', currentUser.id);
     setLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      console.log('Profile: Making request to /user/{user_id}/orders endpoint');
-      const response = await fetch(`http://localhost:8000/user/${currentUser.id}/orders`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      console.log('Profile: Making authenticated request to user orders endpoint');
+      const data = await authFetch(`/user/${currentUser.id}/orders`);
+      
       console.log("Profile: User orders response:", data);
       
       if (data.error) {
