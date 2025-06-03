@@ -30,9 +30,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Sidebar */}
-      <div className="bg-gray-900 text-white w-64 flex-shrink-0">
+    <div className="min-h-screen flex w-full">
+      {/* Single Sidebar */}
+      <div className="bg-gray-900 text-white w-64 flex-shrink-0 fixed h-full z-10">
         <div className="p-4">
           <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
@@ -108,8 +108,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
       </div>
       
-      {/* Main content */}
-      <div className="flex-1 overflow-x-auto">
+      {/* Main content with proper left margin to account for fixed sidebar */}
+      <div className="flex-1 ml-64">
         <main className="p-6">
           {children}
         </main>
