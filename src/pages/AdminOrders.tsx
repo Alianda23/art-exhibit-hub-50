@@ -24,11 +24,10 @@ interface Order {
   type: 'artwork' | 'exhibition';
   reference_id: string;
   item_title: string;
-  amount: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  total_amount: number;
   payment_status: 'pending' | 'completed' | 'failed';
-  payment_method: string;
-  created_at: string;
+  order_date: string;
+  artwork_id?: string;
 }
 
 const AdminOrders = () => {
@@ -63,7 +62,8 @@ const AdminOrders = () => {
     },
   });
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
     try {
       return format(new Date(dateString), 'PPP p');
     } catch (error) {
@@ -142,13 +142,13 @@ const AdminOrders = () => {
                   {orders.map((order: Order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-mono">{order.id}</TableCell>
-                      <TableCell>{order.user_name}</TableCell>
-                      <TableCell>{order.type}</TableCell>
-                      <TableCell>{formatDate(order.created_at)}</TableCell>
-                      <TableCell>KSh {order.amount?.toLocaleString()}</TableCell>
+                      <TableCell>{order.user_name || 'N/A'}</TableCell>
+                      <TableCell>{order.type || 'artwork'}</TableCell>
+                      <TableCell>{formatDate(order.order_date)}</TableCell>
+                      <TableCell>KSh {order.total_amount?.toLocaleString() || 0}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(order.payment_status)}>
-                          {order.payment_status.toUpperCase()}
+                        <Badge className={getStatusColor(order.payment_status || 'pending')}>
+                          {(order.payment_status || 'pending').toUpperCase()}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -181,35 +181,33 @@ const AdminOrders = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date:</p>
-                    <p>{formatDate(selectedOrder.created_at)}</p>
+                    <p>{formatDate(selectedOrder.order_date)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Customer:</p>
-                    <p className="font-medium">{selectedOrder.user_name}</p>
+                    <p className="font-medium">{selectedOrder.user_name || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Type:</p>
-                    <p>{selectedOrder.type}</p>
+                    <p>{selectedOrder.type || 'artwork'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Item:</p>
-                    <p>{selectedOrder.item_title}</p>
+                    <p>{selectedOrder.item_title || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Amount:</p>
-                    <p className="font-medium">KSh {selectedOrder.amount?.toLocaleString()}</p>
+                    <p className="font-medium">KSh {selectedOrder.total_amount?.toLocaleString() || 0}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Payment Status:</p>
-                    <Badge className={getStatusColor(selectedOrder.payment_status)}>
-                      {selectedOrder.payment_status.toUpperCase()}
+                    <Badge className={getStatusColor(selectedOrder.payment_status || 'pending')}>
+                      {(selectedOrder.payment_status || 'pending').toUpperCase()}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Order Status:</p>
-                    <Badge className={getStatusColor(selectedOrder.status)}>
-                      {selectedOrder.status.toUpperCase()}
-                    </Badge>
+                    <p className="text-sm text-gray-500">Reference ID:</p>
+                    <p className="font-mono text-sm">{selectedOrder.reference_id || selectedOrder.artwork_id || 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -217,7 +215,7 @@ const AdminOrders = () => {
                   <Button variant="outline" size="sm">
                     Download Invoice
                   </Button>
-                  {selectedOrder.status === 'pending' && (
+                  {selectedOrder.payment_status === 'pending' && (
                     <Button size="sm">
                       Mark as Complete
                     </Button>
