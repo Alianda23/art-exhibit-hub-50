@@ -5,9 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice, formatDate } from '@/utils/formatters';
-import { CalendarIcon, MapPinIcon, UserIcon, PhoneIcon, MailIcon, Loader2 } from 'lucide-react';
-import { generateExhibitionTicket, authFetch } from '@/services/api';
+import { CalendarIcon, MapPinIcon, UserIcon, PhoneIcon, MailIcon, Loader2, Sparkles } from 'lucide-react';
+import { generateExhibitionTicket, authFetch, getAllArtworks } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import { RecommendationEngine } from '@/services/recommendationService';
+import ArtworkCard from '@/components/ArtworkCard';
+import { Artwork } from '@/types';
 
 type UserOrder = {
   id: string;
@@ -40,7 +43,9 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [bookings, setBookings] = useState<UserBooking[]>([]);
+  const [recommendedArtworks, setRecommendedArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   useEffect(() => {
     console.log('Profile: useEffect triggered for user:', currentUser?.id);
@@ -52,6 +57,13 @@ const Profile = () => {
       console.log('Profile: No current user or user ID found');
     }
   }, [currentUser]);
+
+  // Load recommendations when user switches to recommendations tab
+  useEffect(() => {
+    if (activeTab === 'recommendations' && currentUser?.id && recommendedArtworks.length === 0) {
+      loadPersonalizedRecommendations();
+    }
+  }, [activeTab, currentUser]);
 
   if (!currentUser) {
     console.log('Profile: Redirecting to login - no current user');
@@ -111,6 +123,29 @@ const Profile = () => {
     }
   };
 
+  const loadPersonalizedRecommendations = async () => {
+    console.log('Loading personalized recommendations');
+    setLoadingRecommendations(true);
+    try {
+      const allArtworks = await getAllArtworks();
+      const recommendations = await RecommendationEngine.generatePersonalizedRecommendations(
+        currentUser.id,
+        allArtworks,
+        6
+      );
+      setRecommendedArtworks(recommendations);
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load personalized recommendations.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -140,10 +175,11 @@ const Profile = () => {
         <h1 className="text-3xl font-serif font-bold mb-8">My Account</h1>
 
         <Tabs defaultValue="profile" onValueChange={setActiveTab} className="bg-white rounded-lg shadow-md">
-          <TabsList className="grid w-full grid-cols-3 rounded-t-lg">
+          <TabsList className="grid w-full grid-cols-4 rounded-t-lg">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="bookings">Exhibition Bookings</TabsTrigger>
             <TabsTrigger value="orders">Artwork Orders</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="p-6">
@@ -335,6 +371,69 @@ const Profile = () => {
                   onClick={() => navigate('/artworks')}
                 >
                   Explore Artworks
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="recommendations" className="p-6">
+            <div className="flex items-center mb-6">
+              <Sparkles className="h-6 w-6 text-gold mr-2" />
+              <h2 className="text-xl font-serif font-semibold">Personalized Recommendations</h2>
+            </div>
+            
+            <div className="mb-6 p-4 bg-gold/10 rounded-lg border border-gold/20">
+              <p className="text-sm text-gray-700">
+                These recommendations are based on your purchase history and preferences. 
+                The more you purchase, the better our recommendations become!
+              </p>
+            </div>
+            
+            {loadingRecommendations ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-gold" />
+                <span className="ml-2">Loading personalized recommendations...</span>
+              </div>
+            ) : recommendedArtworks.length > 0 ? (
+              <div className="artwork-grid">
+                {recommendedArtworks.map((artwork) => (
+                  <ArtworkCard key={artwork.id} artwork={artwork} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-10">
+                <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">
+                  No personalized recommendations available yet.
+                </p>
+                <p className="text-sm text-gray-500 mb-6">
+                  Start by purchasing some artworks or booking exhibitions to help us understand your preferences.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button 
+                    className="bg-gold hover:bg-gold-dark text-white"
+                    onClick={() => navigate('/artworks')}
+                  >
+                    Browse Artworks
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate('/exhibitions')}
+                  >
+                    View Exhibitions
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {recommendedArtworks.length > 0 && (
+              <div className="mt-8 text-center">
+                <Button 
+                  variant="outline"
+                  onClick={loadPersonalizedRecommendations}
+                  disabled={loadingRecommendations}
+                >
+                  Refresh Recommendations
                 </Button>
               </div>
             )}

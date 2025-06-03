@@ -1,14 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import ArtworkCard from '@/components/ArtworkCard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { formatPrice } from '@/utils/formatters';
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, User } from 'lucide-react';
 import { getAllArtworks } from '@/services/api';
 import { Artwork } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { RecommendationEngine } from '@/services/recommendationService';
 
 const ArtworksPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +20,9 @@ const ArtworksPage = () => {
   const [loading, setLoading] = useState(true);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [recommendedArtworks, setRecommendedArtworks] = useState<Artwork[]>([]);
+  const [isPersonalized, setIsPersonalized] = useState(false);
   const { toast } = useToast();
+  const { currentUser, isAuthenticated } = useAuth();
   
   // Get min and max prices from artwork data
   const minPrice = 0;
@@ -53,43 +58,59 @@ const ArtworksPage = () => {
   }, [toast]);
 
   // Generate personalized recommendations
-  const generateRecommendations = () => {
+  const generateRecommendations = async () => {
     if (artworks.length === 0) return;
     
-    console.log("Generating personalized recommendations");
+    console.log("Generating recommendations");
     
-    // For demonstration purposes, we'll consider the current search and price filters
-    // and pick artworks that match those criteria as "personalized recommendations"
-    let recommendations: Artwork[] = [];
-    
-    if (searchTerm.trim() !== '') {
-      // If there's a search term, generate recommendations based on similar terms
-      const relevantTerms = searchTerm.toLowerCase().split(' ');
+    try {
+      let recommendations: Artwork[] = [];
+      let personalized = false;
       
-      recommendations = artworks
-        .filter(artwork => {
-          return relevantTerms.some(term => 
-            artwork.title.toLowerCase().includes(term) || 
-            artwork.description.toLowerCase().includes(term) ||
-            artwork.medium.toLowerCase().includes(term)
-          );
-        })
-        .slice(0, 3);
-    } else {
-      // Otherwise pick some random ones in the price range
-      recommendations = artworks
-        .filter(artwork => artwork.price >= priceRange[0] && artwork.price <= priceRange[1])
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 3);
+      if (isAuthenticated && currentUser?.id) {
+        console.log("Generating personalized recommendations");
+        recommendations = await RecommendationEngine.generatePersonalizedRecommendations(
+          currentUser.id, 
+          artworks, 
+          6
+        );
+        personalized = true;
+      } else {
+        console.log("Generating general recommendations");
+        // Filter by current search and price criteria for non-authenticated users
+        const filteredForRecommendations = artworks.filter(artwork => {
+          const matchesSearch = searchTerm.trim() === '' || 
+            artwork.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            artwork.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            artwork.description.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          const matchesPrice = artwork.price >= priceRange[0] && artwork.price <= priceRange[1];
+          return matchesSearch && matchesPrice && artwork.status === 'available';
+        });
+        
+        recommendations = filteredForRecommendations
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 6);
+      }
+      
+      setRecommendedArtworks(recommendations);
+      setIsPersonalized(personalized);
+      setShowRecommendations(true);
+      
+      toast({
+        title: personalized ? "Personalized Recommendations" : "Recommendations Generated",
+        description: personalized ? 
+          "Here are artworks recommended based on your purchase history." :
+          "Here are some artworks you might like based on your current filters.",
+      });
+    } catch (error) {
+      console.error('Error generating recommendations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate recommendations. Please try again.",
+        variant: "destructive",
+      });
     }
-    
-    setRecommendedArtworks(recommendations);
-    setShowRecommendations(true);
-    
-    toast({
-      title: "Recommendations Generated",
-      description: "Here are some artworks you might like based on your preferences.",
-    });
   };
 
   // Filter artworks based on search term and price range
@@ -162,8 +183,8 @@ const ArtworksPage = () => {
               onClick={generateRecommendations}
               className="bg-gold hover:bg-gold-dark text-white flex items-center gap-2"
             >
-              <Sparkles className="h-4 w-4" />
-              Get Recommendations
+              {isAuthenticated ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+              {isAuthenticated ? "Get Personal Recommendations" : "Get Recommendations"}
             </Button>
           </div>
         </div>
@@ -172,9 +193,19 @@ const ArtworksPage = () => {
         {showRecommendations && (
           <div className="mb-12 bg-white p-6 rounded-lg shadow-md">
             <div className="flex items-center mb-4">
-              <Sparkles className="h-5 w-5 text-gold mr-2" />
-              <h2 className="text-2xl font-serif font-bold">Recommendations For You</h2>
+              {isPersonalized ? <User className="h-5 w-5 text-gold mr-2" /> : <Sparkles className="h-5 w-5 text-gold mr-2" />}
+              <h2 className="text-2xl font-serif font-bold">
+                {isPersonalized ? "Personalized Recommendations" : "Recommendations For You"}
+              </h2>
             </div>
+            
+            {isPersonalized && (
+              <div className="mb-4 p-3 bg-gold/10 rounded border border-gold/20">
+                <p className="text-sm text-gray-700">
+                  These recommendations are based on your purchase history and preferences.
+                </p>
+              </div>
+            )}
             
             {recommendedArtworks.length > 0 ? (
               <div className="artwork-grid">

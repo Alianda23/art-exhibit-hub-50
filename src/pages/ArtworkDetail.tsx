@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import ArtworkCard from '@/components/ArtworkCard';
 import { Artwork } from '@/types';
 import { getArtwork, getAllArtworks } from '@/services/api';
-import { Ban } from 'lucide-react';
+import { RecommendationEngine } from '@/services/recommendationService';
+import { Ban, Sparkles } from 'lucide-react';
 
 const ArtworkDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,13 +32,15 @@ const ArtworkDetail = () => {
         console.log("Artwork data received:", data);
         setArtwork(data);
         
-        // Fetch all artworks to get related ones by the same artist
+        // Fetch all artworks to get intelligent recommendations
         const allArtworks = await getAllArtworks();
-        const related = allArtworks
-          .filter((a: Artwork) => a.id !== id && a.artist === data.artist)
-          .slice(0, 3);
+        const recommendations = RecommendationEngine.generateSimilarArtworkRecommendations(
+          data, 
+          allArtworks, 
+          4
+        );
         
-        setRelatedArtworks(related);
+        setRelatedArtworks(recommendations);
       } catch (error) {
         console.error('Failed to fetch artwork:', error);
         toast({
@@ -173,9 +176,12 @@ const ArtworkDetail = () => {
         
         {relatedArtworks.length > 0 && (
           <div className="mt-16">
-            <h2 className="text-2xl font-serif font-bold mb-8">
-              More by {artwork.artist}
-            </h2>
+            <div className="flex items-center mb-8">
+              <Sparkles className="h-6 w-6 text-gold mr-2" />
+              <h2 className="text-2xl font-serif font-bold">
+                You Might Also Like
+              </h2>
+            </div>
             <div className="artwork-grid">
               {relatedArtworks.map((relatedArtwork) => (
                 <ArtworkCard key={relatedArtwork.id} artwork={relatedArtwork} />

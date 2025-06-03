@@ -1,17 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ArtworkCard from '@/components/ArtworkCard';
 import { getAllArtworks } from '@/services/api';
 import { Artwork } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { RecommendationEngine } from '@/services/recommendationService';
 
 const ArtworkRecommendations = () => {
   const [recommendedArtworks, setRecommendedArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPersonalized, setIsPersonalized] = useState(false);
   const { toast } = useToast();
+  const { currentUser, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchAndGenerateRecommendations = async () => {
@@ -20,9 +24,30 @@ const ArtworkRecommendations = () => {
         const allArtworks = await getAllArtworks();
         console.log("Fetched artworks for recommendations:", allArtworks.length);
         
-        // Generate recommendations from all artworks
-        const recommendations = generateRecommendations(allArtworks);
+        let recommendations: Artwork[] = [];
+        let personalized = false;
+        
+        // Generate personalized recommendations if user is authenticated
+        if (isAuthenticated && currentUser?.id) {
+          console.log("Generating personalized recommendations for user:", currentUser.id);
+          recommendations = await RecommendationEngine.generatePersonalizedRecommendations(
+            currentUser.id, 
+            allArtworks, 
+            3
+          );
+          personalized = true;
+        } else {
+          // Fallback to general recommendations
+          console.log("Generating general recommendations");
+          recommendations = RecommendationEngine.generateSimilarArtworkRecommendations(
+            allArtworks[0] || {} as Artwork, 
+            allArtworks, 
+            3
+          );
+        }
+        
         setRecommendedArtworks(recommendations);
+        setIsPersonalized(personalized);
       } catch (error) {
         console.error('Failed to fetch artwork recommendations:', error);
         toast({
@@ -36,30 +61,24 @@ const ArtworkRecommendations = () => {
     };
     
     fetchAndGenerateRecommendations();
-  }, [toast]);
-
-  // Generate personalized recommendations
-  const generateRecommendations = (artworks: Artwork[]): Artwork[] => {
-    console.log("Generating recommendations");
-    
-    // For demonstration purposes, pick 3 random artworks as "recommendations"
-    if (artworks.length <= 3) {
-      return artworks;
-    } else {
-      // Shuffle array and pick first 3
-      const shuffled = [...artworks].sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, 3);
-    }
-  };
+  }, [toast, isAuthenticated, currentUser]);
 
   return (
     <section className="py-20 bg-secondary">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-gold" />
+            {isPersonalized ? (
+              <User className="h-6 w-6 text-gold" />
+            ) : (
+              <Sparkles className="h-6 w-6 text-gold" />
+            )}
             <h2 className="text-3xl md:text-4xl font-serif font-bold">
-              Featured <span className="text-gold">Recommendations</span>
+              {isPersonalized ? (
+                <>Recommended <span className="text-gold">For You</span></>
+              ) : (
+                <>Featured <span className="text-gold">Recommendations</span></>
+              )}
             </h2>
           </div>
           <Link to="/artworks">
@@ -69,6 +88,14 @@ const ArtworkRecommendations = () => {
           </Link>
         </div>
         
+        {isPersonalized && (
+          <div className="mb-8 p-4 bg-gold/10 rounded-lg border border-gold/20">
+            <p className="text-sm text-gray-700">
+              <strong>Personalized for you:</strong> These recommendations are based on your purchase history and preferences.
+            </p>
+          </div>
+        )}
+        
         <div className="artwork-grid">
           {loading ? (
             <p className="text-center w-full">Loading recommendations...</p>
@@ -77,7 +104,16 @@ const ArtworkRecommendations = () => {
               <ArtworkCard key={artwork.id} artwork={artwork} />
             ))
           ) : (
-            <p className="text-center w-full">No recommendations found. Please check back later.</p>
+            <div className="text-center w-full">
+              <p className="mb-4">No recommendations found. Please check back later.</p>
+              {!isAuthenticated && (
+                <p className="text-sm text-gray-600">
+                  <Link to="/login" className="text-gold hover:text-gold-dark underline">
+                    Sign in
+                  </Link> to get personalized recommendations based on your preferences.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
