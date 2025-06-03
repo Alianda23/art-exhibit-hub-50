@@ -159,11 +159,16 @@ def get_user_orders(user_id):
     """Get all orders and bookings for a specific user"""
     connection = get_db_connection()
     if connection is None:
+        print(f"Database connection failed for user {user_id}")
         return {"error": "Database connection failed"}
     
     cursor = connection.cursor()
     
     try:
+        # Convert user_id to integer to ensure proper type matching
+        user_id = int(user_id)
+        print(f"Getting orders for user_id: {user_id} (type: {type(user_id)})")
+        
         # Get user's artwork orders
         artwork_query = """
         SELECT ao.id, ao.artwork_id, a.title as artworkTitle, a.artist, a.image_url,
@@ -175,8 +180,10 @@ def get_user_orders(user_id):
         WHERE ao.user_id = %s
         ORDER BY ao.order_date DESC
         """
+        print(f"Executing artwork query with user_id: {user_id}")
         cursor.execute(artwork_query, (user_id,))
         orders = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        print(f"Found {len(orders)} artwork orders for user {user_id}")
         
         # Get user's exhibition bookings
         booking_query = """
@@ -188,18 +195,26 @@ def get_user_orders(user_id):
         WHERE eb.user_id = %s
         ORDER BY eb.booking_date DESC
         """
+        print(f"Executing booking query with user_id: {user_id}")
         cursor.execute(booking_query, (user_id,))
         bookings = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        print(f"Found {len(bookings)} exhibition bookings for user {user_id}")
         
-        return {"orders": orders, "bookings": bookings}
+        result = {"orders": orders, "bookings": bookings}
+        print(f"Final result for user {user_id}: {result}")
+        return result
+        
     except Exception as e:
-        print(f"Error getting user orders: {e}")
+        print(f"Error getting user orders for user {user_id}: {e}")
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
     finally:
         if connection.is_connected():
             cursor.close()
             connection.close()
 
+# ... keep existing code (get_artist_artworks, get_artist_orders, get_all_artists functions) the same
 def get_artist_artworks(artist_id):
     """Get all artworks for a specific artist"""
     connection = get_db_connection()

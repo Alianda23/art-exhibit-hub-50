@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice, formatDate } from '@/utils/formatters';
 import { CalendarIcon, MapPinIcon, UserIcon, PhoneIcon, MailIcon, Loader2 } from 'lucide-react';
-import { getUserOrders, generateExhibitionTicket } from '@/utils/mpesa';
+import { generateExhibitionTicket } from '@/utils/mpesa';
 import { useToast } from '@/hooks/use-toast';
 
 type UserOrder = {
@@ -43,29 +43,14 @@ const Profile = () => {
   const [bookings, setBookings] = useState<UserBooking[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Enhanced debugging for authentication and user state
   useEffect(() => {
-    console.log('Profile: useEffect triggered. Current user state:', {
-      currentUser,
-      hasCurrentUser: !!currentUser,
-      currentUserId: currentUser?.id,
-      currentUserName: currentUser?.name,
-      isAuthenticated: !!currentUser
-    });
+    console.log('Profile: useEffect triggered for user:', currentUser?.id);
     
-    console.log('Profile: localStorage contents:', {
-      token: localStorage.getItem('token') ? 'EXISTS' : 'MISSING',
-      userId: localStorage.getItem('userId'),
-      adminId: localStorage.getItem('adminId'),
-      userName: localStorage.getItem('userName'),
-      isAuthenticated: !!localStorage.getItem('token')
-    });
-
-    if (currentUser) {
-      console.log('Profile: Current user found, fetching orders for user:', currentUser);
+    if (currentUser && currentUser.id) {
+      console.log('Profile: Fetching orders for user ID:', currentUser.id);
       fetchUserOrders();
     } else {
-      console.log('Profile: No current user found - user needs to login');
+      console.log('Profile: No current user or user ID found');
     }
   }, [currentUser]);
 
@@ -86,31 +71,48 @@ const Profile = () => {
     console.log('Profile: Starting to fetch orders for user ID:', currentUser.id);
     setLoading(true);
     try {
-      console.log('Profile: About to call getUserOrders API...');
-      const response = await getUserOrders(currentUser.id);
-      console.log("Profile: User orders response:", response);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('Profile: Making request to /user/{user_id}/orders endpoint');
+      const response = await fetch(`http://localhost:8000/user/${currentUser.id}/orders`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Profile: User orders response:", data);
       
-      if (response.error) {
-        console.error('Profile: Error in response:', response.error);
+      if (data.error) {
+        console.error('Profile: Error in response:', data.error);
         toast({
           title: "Error",
-          description: response.error || "Failed to load your orders and bookings",
+          description: data.error || "Failed to load your orders and bookings",
           variant: "destructive"
         });
         return;
       }
       
-      if (response.orders) {
-        console.log('Profile: Setting orders:', response.orders);
-        setOrders(response.orders);
+      if (data.orders) {
+        console.log('Profile: Setting orders:', data.orders);
+        setOrders(data.orders);
       } else {
         console.log('Profile: No orders in response');
         setOrders([]);
       }
       
-      if (response.bookings) {
-        console.log('Profile: Setting bookings:', response.bookings);
-        setBookings(response.bookings);
+      if (data.bookings) {
+        console.log('Profile: Setting bookings:', data.bookings);
+        setBookings(data.bookings);
       } else {
         console.log('Profile: No bookings in response');
         setBookings([]);
@@ -154,30 +156,6 @@ const Profile = () => {
     <div className="min-h-screen bg-secondary py-12 px-4">
       <div className="container mx-auto max-w-5xl">
         <h1 className="text-3xl font-serif font-bold mb-8">My Account</h1>
-
-        {/* Enhanced debug information */}
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-sm font-semibold text-red-800 mb-2">Authentication Debug Info:</h3>
-          <div className="text-xs text-red-700 space-y-1">
-            <p>Current User ID: {currentUser?.id || 'MISSING'}</p>
-            <p>Current User Name: {currentUser?.name || 'MISSING'}</p>
-            <p>Has Token: {localStorage.getItem('token') ? 'YES' : 'NO'}</p>
-            <p>localStorage userId: {localStorage.getItem('userId') || 'MISSING'}</p>
-            <p>localStorage adminId: {localStorage.getItem('adminId') || 'MISSING'}</p>
-            <p>fetchUserOrders called: Check console for logs</p>
-          </div>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="mt-2"
-            onClick={() => {
-              console.log('Manual fetch triggered');
-              fetchUserOrders();
-            }}
-          >
-            Manual Fetch Orders
-          </Button>
-        </div>
 
         <Tabs defaultValue="profile" onValueChange={setActiveTab} className="bg-white rounded-lg shadow-md">
           <TabsList className="grid w-full grid-cols-3 rounded-t-lg">
@@ -249,17 +227,6 @@ const Profile = () => {
           <TabsContent value="bookings" className="p-6">
             <h2 className="text-xl font-serif font-semibold mb-4">Your Exhibition Bookings</h2>
             
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700">
-                Debug Info: Found {bookings.length} bookings. Loading: {loading ? 'Yes' : 'No'}
-              </p>
-              {bookings.length > 0 && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Booking IDs: {bookings.map(b => b.id).join(', ')}
-                </p>
-              )}
-            </div>
-            
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gold" />
@@ -312,9 +279,6 @@ const Profile = () => {
             ) : (
               <div className="text-center py-10">
                 <p className="text-gray-600">You haven't booked any exhibitions yet.</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  If you believe this is incorrect, please check if the server is running at localhost:8000
-                </p>
                 <Button 
                   className="mt-4 bg-gold hover:bg-gold-dark text-white"
                   onClick={() => navigate('/exhibitions')}
@@ -327,17 +291,6 @@ const Profile = () => {
 
           <TabsContent value="orders" className="p-6">
             <h2 className="text-xl font-serif font-semibold mb-4">Your Artwork Orders</h2>
-            
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700">
-                Debug Info: Found {orders.length} orders. Loading: {loading ? 'Yes' : 'No'}
-              </p>
-              {orders.length > 0 && (
-                <p className="text-xs text-blue-600 mt-1">
-                  Order IDs: {orders.map(o => o.id).join(', ')}
-                </p>
-              )}
-            </div>
             
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -395,9 +348,6 @@ const Profile = () => {
             ) : (
               <div className="text-center py-10">
                 <p className="text-gray-600">You haven't purchased any artworks yet.</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  If you believe this is incorrect, please check if the server is running at localhost:8000
-                </p>
                 <Button 
                   className="mt-4 bg-gold hover:bg-gold-dark text-white"
                   onClick={() => navigate('/artworks')}

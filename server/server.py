@@ -17,7 +17,7 @@ from contact import create_contact_message, get_messages, update_message, json_d
 from db_setup import initialize_database
 from middleware import auth_required, admin_required, extract_auth_token, verify_token
 from mpesa import handle_stk_push_request, check_transaction_status, handle_mpesa_callback
-from db_operations import get_all_tickets, get_all_orders, get_artist_artworks, get_artist_orders, get_all_artists
+from db_operations import get_all_tickets, get_all_orders, get_artist_artworks, get_artist_orders, get_all_artists, get_user_orders
 from database import get_db_connection  # Add this import
 
 # Define the port
@@ -32,6 +32,25 @@ def ensure_uploads_directory():
 
 # Call this function to ensure directory exists
 ensure_uploads_directory()
+
+# Create a default placeholder.svg if it doesn't exist
+def create_placeholder_svg():
+    placeholder_path = os.path.join(os.path.dirname(__file__), "static", "placeholder.svg")
+    if not os.path.exists(placeholder_path):
+        try:
+            # Create a simple SVG placeholder
+            svg_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#f3f4f6"/>
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="18" fill="#9ca3af" text-anchor="middle" dy=".3em">
+    Image Not Available
+  </text>
+</svg>'''
+            with open(placeholder_path, "w") as f:
+                f.write(svg_content)
+            print(f"Created placeholder.svg at: {placeholder_path}")
+        except Exception as e:
+            print(f"Failed to create placeholder.svg: {e}")
 
 # Create a default exhibition image if it doesn't exist
 def create_default_exhibition_image():
@@ -55,7 +74,8 @@ def create_default_exhibition_image():
         except Exception as e:
             print(f"Failed to create default exhibition image: {e}")
 
-# Call this function to ensure the default exhibition image exists
+# Call these functions to ensure the files exist
+create_placeholder_svg()
 create_default_exhibition_image()
 
 # Custom JSON encoder to handle Decimal types
@@ -166,9 +186,19 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         try:
             # Check if file exists
             if not os.path.exists(file_path):
-                self.send_response(404)
-                self.end_headers()
-                return
+                # If requesting placeholder.svg specifically, serve it from static directory
+                if file_path.endswith('placeholder.svg'):
+                    placeholder_path = os.path.join(os.path.dirname(__file__), "static", "placeholder.svg")
+                    if os.path.exists(placeholder_path):
+                        file_path = placeholder_path
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+                        return
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
                 
             # Determine the content type
             content_type, _ = mimetypes.guess_type(file_path)
@@ -205,6 +235,13 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.serve_static_file(file_path)
             return
         
+        # Handle placeholder.svg specifically
+        elif path == '/placeholder.svg':
+            file_path = os.path.join(os.path.dirname(__file__), "static", "placeholder.svg")
+            print(f"Serving placeholder.svg from: {file_path}")
+            self.serve_static_file(file_path)
+            return
+        
         # Handle API endpoints
         # Handle GET /artworks
         if path == '/artworks':
@@ -232,6 +269,52 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         elif path.startswith('/exhibitions/') and len(path.split('/')) == 3:
             exhibition_id = path.split('/')[2]
             response = get_exhibition(exhibition_id)
+            self._set_response()
+            self.wfile.write(json_dumps(response).encode())
+            return
+        
+        # Handle GET /user/{user_id}/orders - NEW ENDPOINT
+        elif path.startswith('/user/') and path.endswith('/orders') and len(path.split('/')) == 4:
+            user_id = path.split('/')[2]
+            print(f"Processing GET /user/{user_id}/orders request")
+            
+            # Verify authentication
+            auth_header = self.headers.get('Authorization', '')
+            token = extract_auth_token(auth_header)
+            if not token:
+                print("Authentication required - no token found")
+                self._set_response(401)
+                self.wfile.write(json_dumps({"error": "Authentication required"}).encode())
+                return
+            
+            payload = verify_token(token)
+            if isinstance(payload, dict) and "error" in payload:
+                print(f"Authentication failed: {payload['error']}")
+                self._set_response(401)
+                self.wfile.write(json_dumps({"error": payload["error"]}).encode())
+                return
+            
+            # Check if user is requesting their own data or is admin
+            requesting_user_id = str(payload.get("sub"))
+            is_admin = payload.get("is_admin", False)
+            
+            if not is_admin and requesting_user_id != user_id:
+                print(f"Access denied - user {requesting_user_id} trying to access data for user {user_id}")
+                self._set_response(403)
+                self.wfile.write(json_dumps({"error": "Access denied - you can only view your own orders"}).encode())
+                return
+            
+            print(f"Authorized request for user {user_id} orders")
+            
+            # Get user orders and bookings
+            response = get_user_orders(user_id)
+            print(f"User orders response: {response}")
+            
+            if "error" in response:
+                self._set_response(500)
+                self.wfile.write(json_dumps(response).encode())
+                return
+            
             self._set_response()
             self.wfile.write(json_dumps(response).encode())
             return
@@ -963,7 +1046,8 @@ def main():
     # Create uploads directory if it doesn't exist
     ensure_uploads_directory()
     
-    # Create default exhibition image
+    # Create placeholder and default images
+    create_placeholder_svg()
     create_default_exhibition_image()
     
     # Create an HTTP server
