@@ -363,27 +363,4 @@ const Profile = () => {
   );
 };
 
-const handleLogout = () => {
-  logout();
-  navigate('/');
-};
-
-const handlePrintTicket = async (bookingId: string) => {
-  try {
-    const response = await generateExhibitionTicket(bookingId);
-    if (response.ticketUrl) {
-      window.open(response.ticketUrl, '_blank');
-    } else {
-      throw new Error('Failed to generate ticket');
-    }
-  } catch (error) {
-    console.error('Error generating ticket:', error);
-    toast({
-      title: "Error",
-      description: "Failed to generate ticket. Please try again.",
-      variant: "destructive"
-    });
-  }
-};
-
 export default Profile;
