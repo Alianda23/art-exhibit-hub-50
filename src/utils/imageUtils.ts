@@ -13,7 +13,7 @@ export const getValidImageUrl = (url: string | undefined): string => {
   // Default fallback for empty or undefined URLs
   if (!url) {
     console.log("Empty image URL, using placeholder");
-    return "http://localhost:8000/static/placeholder.svg";
+    return "http://localhost:8000/placeholder.svg";
   }
   
   // If it's already a complete URL (http/https), use it as is
@@ -28,7 +28,7 @@ export const getValidImageUrl = (url: string | undefined): string => {
     // If they're truncated, it's better to use a placeholder
     if (url.length < 100 || !url.includes(',')) {
       console.log("Detected incomplete base64 image, using placeholder instead");
-      return "http://localhost:8000/static/placeholder.svg";
+      return "http://localhost:8000/placeholder.svg";
     }
     console.log("Using base64 image data");
     return url;
@@ -75,7 +75,7 @@ export const getValidImageUrl = (url: string | undefined): string => {
 };
 
 // Create a component-ready image URL with fallback
-export const createImageSrc = (url: string | undefined, defaultImage = "/static/placeholder.svg"): string => {
+export const createImageSrc = (url: string | undefined, defaultImage = "/placeholder.svg"): string => {
   try {
     const processedUrl = getValidImageUrl(url);
     console.log(`Processing image URL: ${url} → ${processedUrl}`);
@@ -87,7 +87,7 @@ export const createImageSrc = (url: string | undefined, defaultImage = "/static/
 };
 
 // Handle image loading errors
-export const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, fallbackSrc = "/static/placeholder.svg") => {
+export const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, fallbackSrc = "/placeholder.svg") => {
   const target = e.target as HTMLImageElement;
   console.error(`Image failed to load: ${target.src}`);
   

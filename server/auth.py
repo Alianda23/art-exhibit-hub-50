@@ -1,3 +1,4 @@
+
 import hashlib
 import secrets
 from database import get_db_connection, json_dumps
@@ -6,7 +7,6 @@ import datetime
 import os
 from decimal import Decimal
 from middleware import SECRET_KEY  # Import the shared SECRET_KEY
-from flask import request, jsonify
 
 def hash_password(password):
     """Hash a password using SHA-256"""
@@ -53,28 +53,6 @@ def register_user(name, email, password, phone):
         if connection.is_connected():
             cursor.close()
             connection.close()
-
-def register_admin():
-    """Register a new admin (called from HTTP endpoint)"""
-    from flask import request, jsonify
-    
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
-    
-    name = data.get('name')
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not all([name, email, password]):
-        return jsonify({"error": "Name, email, and password are required"}), 400
-    
-    result = create_admin(name, email, password)
-    
-    if result.get('error'):
-        return jsonify(result), 400
-    
-    return jsonify(result)
 
 def register_artist(name, email, password, phone, bio=""):
     """Register a new artist"""
