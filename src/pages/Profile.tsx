@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice, formatDate } from '@/utils/formatters';
 import { CalendarIcon, MapPinIcon, UserIcon, PhoneIcon, MailIcon, Loader2 } from 'lucide-react';
-import { getUserOrders, generateExhibitionTicket } from '@/utils/mpesa';
+import { generateExhibitionTicket } from '@/utils/mpesa';
 import { useToast } from '@/hooks/use-toast';
 
 type UserOrder = {
@@ -71,31 +71,48 @@ const Profile = () => {
     console.log('Profile: Starting to fetch orders for user ID:', currentUser.id);
     setLoading(true);
     try {
-      console.log('Profile: About to call getUserOrders API...');
-      const response = await getUserOrders(currentUser.id);
-      console.log("Profile: User orders response:", response);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('Profile: Making request to /user/{user_id}/orders endpoint');
+      const response = await fetch(`http://localhost:8000/user/${currentUser.id}/orders`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Profile: User orders response:", data);
       
-      if (response.error) {
-        console.error('Profile: Error in response:', response.error);
+      if (data.error) {
+        console.error('Profile: Error in response:', data.error);
         toast({
           title: "Error",
-          description: response.error || "Failed to load your orders and bookings",
+          description: data.error || "Failed to load your orders and bookings",
           variant: "destructive"
         });
         return;
       }
       
-      if (response.orders) {
-        console.log('Profile: Setting orders:', response.orders);
-        setOrders(response.orders);
+      if (data.orders) {
+        console.log('Profile: Setting orders:', data.orders);
+        setOrders(data.orders);
       } else {
         console.log('Profile: No orders in response');
         setOrders([]);
       }
       
-      if (response.bookings) {
-        console.log('Profile: Setting bookings:', response.bookings);
-        setBookings(response.bookings);
+      if (data.bookings) {
+        console.log('Profile: Setting bookings:', data.bookings);
+        setBookings(data.bookings);
       } else {
         console.log('Profile: No bookings in response');
         setBookings([]);
@@ -344,6 +361,29 @@ const Profile = () => {
       </div>
     </div>
   );
+};
+
+const handleLogout = () => {
+  logout();
+  navigate('/');
+};
+
+const handlePrintTicket = async (bookingId: string) => {
+  try {
+    const response = await generateExhibitionTicket(bookingId);
+    if (response.ticketUrl) {
+      window.open(response.ticketUrl, '_blank');
+    } else {
+      throw new Error('Failed to generate ticket');
+    }
+  } catch (error) {
+    console.error('Error generating ticket:', error);
+    toast({
+      title: "Error",
+      description: "Failed to generate ticket. Please try again.",
+      variant: "destructive"
+    });
+  }
 };
 
 export default Profile;
