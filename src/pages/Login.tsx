@@ -8,44 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import TwoFactorVerification from "@/components/TwoFactorVerification";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showTwoFactor, setShowTwoFactor] = useState(false);
-  const [pendingCredentials, setPendingCredentials] = useState<{email: string, password: string} | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const sendTwoFactorCode = async (userEmail: string, userType: 'user' | 'artist' = 'user') => {
-    try {
-      const response = await fetch('http://localhost:8000/send-2fa-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: userEmail,
-          userType
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send verification code');
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error sending 2FA code:', error);
-      throw error;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,32 +36,16 @@ const Login = () => {
     
     try {
       console.log("Attempting login with:", { email });
+      const success = await login(email, password);
       
-      // First, validate credentials without logging in
-      const response = await fetch('http://localhost:8000/validate-credentials', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          userType: 'user'
-        }),
-      });
-
-      const data = await response.json();
+      console.log("Login result:", success);
       
-      if (data.valid) {
-        // Credentials are valid, send 2FA code
-        await sendTwoFactorCode(email, 'user');
-        setPendingCredentials({ email, password });
-        setShowTwoFactor(true);
-        
+      if (success) {
         toast({
-          title: "Verification Code Sent",
-          description: "Please check your email for the verification code.",
+          title: "Success",
+          description: "You have successfully logged in",
         });
+        navigate("/");
       } else {
         setError("Invalid email or password");
         toast({
@@ -111,47 +66,6 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  const handleTwoFactorSuccess = async () => {
-    if (!pendingCredentials) return;
-    
-    try {
-      const success = await login(pendingCredentials.email, pendingCredentials.password);
-      
-      if (success) {
-        toast({
-          title: "Success",
-          description: "You have successfully logged in",
-        });
-        navigate("/home");
-      }
-    } catch (error) {
-      console.error("Final login error:", error);
-      toast({
-        title: "Error",
-        description: "Login failed after verification. Please try again.",
-        variant: "destructive",
-      });
-      setShowTwoFactor(false);
-      setPendingCredentials(null);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (!pendingCredentials) return;
-    await sendTwoFactorCode(pendingCredentials.email, 'user');
-  };
-
-  if (showTwoFactor && pendingCredentials) {
-    return (
-      <TwoFactorVerification
-        email={pendingCredentials.email}
-        userType="user"
-        onVerificationSuccess={handleTwoFactorSuccess}
-        onResendCode={handleResendCode}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-secondary">
