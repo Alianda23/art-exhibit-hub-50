@@ -2,7 +2,7 @@
 import React, { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isAdmin, logout } from '@/services/api';
-import { Calendar, MessageSquare, Image, Ticket, ShoppingBag, LogOut, Users } from 'lucide-react';
+import { Calendar, MessageSquare, Image, Ticket, ShoppingBag, LogOut, Users, FileText } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -30,9 +30,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex w-full">
-      {/* Single Sidebar */}
-      <div className="bg-gray-900 text-white w-64 flex-shrink-0 fixed h-full z-10">
+    <div className="min-h-screen bg-gray-100">
+      {/* Fixed Sidebar */}
+      <div className="bg-gray-900 text-white w-64 fixed left-0 top-0 h-full z-10">
         <div className="p-4">
           <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
@@ -95,6 +95,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 <Users className="mr-2 h-4 w-4" /> Artists
               </Link>
             </li>
+            <li>
+              <Link 
+                to="/admin/reports" 
+                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/reports')} flex items-center`}
+              >
+                <FileText className="mr-2 h-4 w-4" /> Reports
+              </Link>
+            </li>
           </ul>
         </nav>
         
@@ -108,8 +116,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
       </div>
       
-      {/* Main content with proper left margin to account for fixed sidebar */}
-      <div className="flex-1 ml-64">
+      {/* Main content with proper left margin */}
+      <div className="ml-64">
         <main className="p-6">
           {children}
         </main>
