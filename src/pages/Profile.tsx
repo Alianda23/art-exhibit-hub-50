@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,8 @@ type UserBooking = {
   slots: number;
   totalAmount: number;
   status: string;
+  exhibition_date?: string;
+  ticket_code?: string;
 };
 
 const Profile = () => {
@@ -199,6 +202,13 @@ const Profile = () => {
       doc.text(booking.exhibitionTitle, 70, yPosition);
       yPosition += lineHeight;
       
+      // Exhibition date
+      doc.setTextColor(102, 102, 102);
+      doc.text('Exhibition Date:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(booking.exhibition_date ? formatDate(booking.exhibition_date) : 'TBD', 70, yPosition);
+      yPosition += lineHeight;
+      
       // Booking date
       doc.setTextColor(102, 102, 102);
       doc.text('Booking Date:', 30, yPosition);
@@ -230,11 +240,11 @@ const Profile = () => {
       // Ticket code (centered and highlighted)
       doc.setFontSize(16);
       doc.setTextColor(0, 0, 0);
-      const ticketCode = `TICKET-${String(booking.id).toUpperCase()}`;
-      doc.text(ticketCode, 105, yPosition, { align: 'center' });
+      const ticketCode = booking.ticket_code || `TKT-${String(booking.id).toUpperCase()}`;
+      doc.text(`Ticket Code: ${ticketCode}`, 105, yPosition, { align: 'center' });
       
       // Draw rectangle around ticket code
-      const codeWidth = doc.getTextWidth(ticketCode);
+      const codeWidth = doc.getTextWidth(`Ticket Code: ${ticketCode}`);
       doc.rect(105 - codeWidth/2 - 5, yPosition - 8, codeWidth + 10, 12);
       
       // Footer
@@ -245,7 +255,7 @@ const Profile = () => {
       doc.text(`Generated on ${format(new Date(), 'MMMM do, yyyy h:mm a')}`, 105, yPosition + 10, { align: 'center' });
       
       // Save the PDF
-      const fileName = `exhibition-ticket-${booking.id}.pdf`;
+      const fileName = `exhibition-ticket-${ticketCode}.pdf`;
       doc.save(fileName);
       
       toast({

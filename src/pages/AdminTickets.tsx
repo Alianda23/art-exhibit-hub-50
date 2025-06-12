@@ -26,6 +26,7 @@ interface Ticket {
   exhibition_id: string;
   exhibition_title: string;
   exhibition_image_url?: string;
+  exhibition_date?: string;
   booking_date: string;
   ticket_code: string;
   slots: number;
@@ -165,6 +166,10 @@ const AdminTickets = () => {
                 <span class="value">${ticket.exhibition_title}</span>
               </div>
               <div class="detail-row">
+                <span class="label">Exhibition Date:</span>
+                <span class="value">${ticket.exhibition_date ? format(new Date(ticket.exhibition_date), 'MMMM do, yyyy h:mm a') : 'TBD'}</span>
+              </div>
+              <div class="detail-row">
                 <span class="label">Booking Date:</span>
                 <span class="value">${format(new Date(ticket.booking_date), 'MMMM do, yyyy h:mm a')}</span>
               </div>
@@ -179,7 +184,7 @@ const AdminTickets = () => {
             </div>
             
             <div class="ticket-code">
-              ${ticket.ticket_code}
+              Ticket Code: ${ticket.ticket_code}
             </div>
             
             <div class="footer">
@@ -417,6 +422,10 @@ const AdminTickets = () => {
                   <div>
                     <p className="text-sm text-gray-500">Booking Date:</p>
                     <p>{format(new Date(selectedTicket.booking_date), 'PPP p')}</p>
+                  </div>
+                   <div>
+                    <p className="text-sm text-gray-500">Exhibition Date:</p>
+                    <p>{selectedTicket.exhibition_date ? format(new Date(selectedTicket.exhibition_date), 'PPP p') : 'TBD'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Slots:</p>
