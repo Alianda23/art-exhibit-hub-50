@@ -2,7 +2,22 @@
 import React, { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isAdmin, logout } from '@/services/api';
-import { Calendar, MessageSquare, Image, Ticket, ShoppingBag, LogOut, Users, FileText } from 'lucide-react';
+import { Calendar, MessageSquare, Image, Ticket, ShoppingBag, LogOut, Users, FileText, LayoutDashboard } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -25,104 +40,101 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     navigate('/admin-login');
   };
 
-  const isActive = (path: string) => {
-    return currentPath === path ? 'bg-gray-800' : '';
-  };
+  const menuItems = [
+    {
+      title: "Dashboard",
+      url: "/admin",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Artworks",
+      url: "/admin/artworks",
+      icon: Image,
+    },
+    {
+      title: "Exhibitions",
+      url: "/admin/exhibitions",
+      icon: Calendar,
+    },
+    {
+      title: "Messages",
+      url: "/admin/messages",
+      icon: MessageSquare,
+    },
+    {
+      title: "Tickets",
+      url: "/admin/tickets",
+      icon: Ticket,
+    },
+    {
+      title: "Orders",
+      url: "/admin/orders",
+      icon: ShoppingBag,
+    },
+    {
+      title: "Artists",
+      url: "/admin/artists",
+      icon: Users,
+    },
+    {
+      title: "Reports",
+      url: "/admin/reports",
+      icon: FileText,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Fixed Sidebar */}
-      <div className="bg-gray-900 text-white w-64 fixed left-0 top-0 h-full z-10">
-        <div className="p-4">
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
-        </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <Sidebar>
+          <SidebarHeader>
+            <div className="p-4">
+              <h1 className="text-xl font-bold text-sidebar-foreground">Admin Panel</h1>
+            </div>
+          </SidebarHeader>
+          
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {menuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                        <Link to={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <LogOut />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
         
-        <nav className="mt-8">
-          <ul>
-            <li>
-              <Link 
-                to="/admin" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin')}`}
-              >
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/artworks" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/artworks')} flex items-center`}
-              >
-                <Image className="mr-2 h-4 w-4" /> Artworks
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/exhibitions" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/exhibitions')} flex items-center`}
-              >
-                <Calendar className="mr-2 h-4 w-4" /> Exhibitions
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/messages" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/messages')} flex items-center`}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" /> Messages
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/tickets" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/tickets')} flex items-center`}
-              >
-                <Ticket className="mr-2 h-4 w-4" /> Tickets
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/orders" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/orders')} flex items-center`}
-              >
-                <ShoppingBag className="mr-2 h-4 w-4" /> Orders
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/artists" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/artists')} flex items-center`}
-              >
-                <Users className="mr-2 h-4 w-4" /> Artists
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/admin/reports" 
-                className={`block px-4 py-2 hover:bg-gray-800 ${isActive('/admin/reports')} flex items-center`}
-              >
-                <FileText className="mr-2 h-4 w-4" /> Reports
-              </Link>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="absolute bottom-0 w-64 p-4">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center text-gray-300 hover:text-white"
-          >
-            <LogOut className="mr-2 h-4 w-4" /> Logout
-          </button>
-        </div>
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+          </header>
+          <main className="flex-1 p-6">
+            {children}
+          </main>
+        </SidebarInset>
       </div>
-      
-      {/* Main content with proper left margin */}
-      <div className="ml-64">
-        <main className="p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
