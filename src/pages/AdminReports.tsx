@@ -75,14 +75,16 @@ const AdminReports = () => {
           break;
 
         case 'artworks':
+          console.log('Generating artwork report with data:', artworks);
           const artworkData = artworks?.map((artwork: any) => ({
             title: artwork.title,
-            artist_name: artwork.artist_name,
+            artist_name: artwork.artist, // Fixed: using 'artist' instead of 'artist_name'
             medium: artwork.medium,
             price: artwork.price,
-            available: artwork.available ? 'Yes' : 'No',
-            created_at: format(new Date(artwork.created_at), 'yyyy-MM-dd'),
+            available: artwork.status === 'available' ? 'Yes' : 'No', // Fixed: using 'status' field
+            created_at: artwork.created_at ? format(new Date(artwork.created_at), 'yyyy-MM-dd') : 'N/A',
           })) || [];
+          console.log('Processed artwork data for CSV:', artworkData);
           generateCSV(artworkData, 'artworks_report', ['Title', 'Artist Name', 'Medium', 'Price', 'Available', 'Created At']);
           break;
 
