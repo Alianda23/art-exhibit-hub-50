@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -260,7 +261,7 @@ const Profile = () => {
             </div>
             
             <div class="ticket-code">
-              TICKET-${booking.id.toUpperCase()}
+              TICKET-${String(booking.id).toUpperCase()}
             </div>
             
             <div class="footer">
