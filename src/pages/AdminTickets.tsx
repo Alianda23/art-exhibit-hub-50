@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +5,7 @@ import { isAdmin, getAllTickets } from '@/services/api';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { createImageSrc, handleImageError, preloadImage } from '@/utils/imageUtils';
+import { Search } from 'lucide-react';
 
 interface Ticket {
   id: string;
@@ -38,6 +39,7 @@ const AdminTickets = () => {
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [generatingTicket, setGeneratingTicket] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!isAdmin()) {
@@ -257,6 +259,18 @@ const AdminTickets = () => {
     }
   };
 
+  // Filter tickets based on search term
+  const filteredTickets = React.useMemo(() => {
+    const tickets = data?.tickets || [];
+    if (!searchTerm.trim()) {
+      return tickets;
+    }
+    
+    return tickets.filter((ticket: Ticket) => 
+      ticket.ticket_code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [data?.tickets, searchTerm]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -290,10 +304,26 @@ const AdminTickets = () => {
       
       <div className="grid gap-6 md:grid-cols-[1fr_1fr]">
         <Card className="p-4">
-          <h2 className="text-xl font-semibold mb-4">All Tickets ({tickets.length})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">All Tickets ({filteredTickets.length})</h2>
+          </div>
           
-          {tickets.length === 0 ? (
-            <p className="text-gray-500 p-4 text-center">No tickets to display</p>
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search by ticket code..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {filteredTickets.length === 0 ? (
+            <p className="text-gray-500 p-4 text-center">
+              {searchTerm.trim() ? 'No tickets found matching your search' : 'No tickets to display'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -307,7 +337,7 @@ const AdminTickets = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tickets.map((ticket: Ticket) => (
+                  {filteredTickets.map((ticket: Ticket) => (
                     <TableRow key={ticket.id}>
                       <TableCell>{ticket.user_name}</TableCell>
                       <TableCell>{ticket.exhibition_title}</TableCell>
