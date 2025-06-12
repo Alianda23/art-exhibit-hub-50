@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { isAdmin, getAllTickets, generateExhibitionTicket } from '@/services/api';
+import { isAdmin, getAllTickets } from '@/services/api';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,100 +70,164 @@ const AdminTickets = () => {
     }
   }, [data, error]);
 
-  const handlePrintTicket = async (bookingId: string) => {
+  const generateTicketPDF = (ticket: Ticket) => {
     try {
-      setGeneratingTicket(bookingId);
-      console.log(`Generating ticket for booking: ${bookingId}`);
+      setGeneratingTicket(ticket.id);
+      console.log(`Generating ticket for: ${ticket.id}`);
       
-      const response = await generateExhibitionTicket(bookingId);
-      console.log("Raw ticket generation response:", response);
-      console.log("Response type:", typeof response);
-      
-      if (!response) {
-        throw new Error("No response received from server");
-      }
+      // Create HTML content for the ticket
+      const ticketHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Exhibition Ticket</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              background: #f5f5f5;
+            }
+            .ticket {
+              background: white;
+              border: 2px solid #333;
+              border-radius: 10px;
+              padding: 30px;
+              max-width: 600px;
+              margin: 0 auto;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px dashed #333;
+              padding-bottom: 20px;
+              margin-bottom: 20px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: bold;
+              color: #333;
+              margin-bottom: 10px;
+            }
+            .details {
+              margin: 20px 0;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 10px 0;
+              padding: 5px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .label {
+              font-weight: bold;
+              color: #666;
+            }
+            .value {
+              color: #333;
+            }
+            .ticket-code {
+              text-align: center;
+              font-size: 18px;
+              font-weight: bold;
+              background: #f0f0f0;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+              letter-spacing: 2px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 2px dashed #333;
+              color: #666;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <div class="header">
+              <div class="title">EXHIBITION TICKET</div>
+              <div>Gallery Management System</div>
+            </div>
+            
+            <div class="details">
+              <div class="detail-row">
+                <span class="label">User:</span>
+                <span class="value">${ticket.user_name}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Exhibition:</span>
+                <span class="value">${ticket.exhibition_title}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Booking Date:</span>
+                <span class="value">${format(new Date(ticket.booking_date), 'MMMM do, yyyy h:mm a')}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Slots:</span>
+                <span class="value">${ticket.slots}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Status:</span>
+                <span class="value">${ticket.status.toUpperCase()}</span>
+              </div>
+            </div>
+            
+            <div class="ticket-code">
+              ${ticket.ticket_code}
+            </div>
+            
+            <div class="footer">
+              <p>Please present this ticket at the exhibition entrance</p>
+              <p>Generated on ${format(new Date(), 'MMMM do, yyyy h:mm a')}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
 
-      let blob;
-      
-      // Handle different response formats
-      if (response instanceof Blob) {
-        console.log("Response is already a Blob");
-        blob = response;
-      } else if (response instanceof ArrayBuffer) {
-        console.log("Response is ArrayBuffer, converting to Blob");
-        blob = new Blob([response], { type: 'application/pdf' });
-      } else if (typeof response === 'string') {
-        console.log("Response is string, treating as base64");
-        try {
-          // Remove data URL prefix if present
-          const base64Data = response.replace(/^data:application\/pdf;base64,/, '');
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          blob = new Blob([bytes], { type: 'application/pdf' });
-        } catch (e) {
-          console.error("Failed to decode base64 string:", e);
-          throw new Error("Invalid PDF format - could not decode base64 data");
-        }
-      } else if (response.data) {
-        console.log("Response has data property, processing...");
-        return handlePrintTicket(bookingId); // Recursive call with response.data
-      } else {
-        console.error("Unexpected response format:", response);
-        throw new Error("Invalid PDF format - unexpected response type");
-      }
-
-      // Validate blob
-      if (!blob || blob.size === 0) {
-        throw new Error("Generated PDF is empty or invalid");
-      }
-
-      console.log("PDF blob created successfully, size:", blob.size, "bytes");
-
-      // Create object URL and try to open/download
-      const pdfUrl = URL.createObjectURL(blob);
-      
-      try {
-        // Try opening in new window first
-        const newWindow = window.open(pdfUrl, '_blank');
+      // Create a new window and print
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+        printWindow.focus();
         
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-          console.log("Popup blocked, downloading instead");
-          // Fallback to download
-          const link = document.createElement('a');
-          link.href = pdfUrl;
-          link.download = `exhibition-ticket-${bookingId}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          toast({
-            title: "Download Started",
-            description: "Ticket is being downloaded to your device",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: "Ticket opened in new window",
-          });
-        }
-      } finally {
-        // Clean up the object URL after a delay
-        setTimeout(() => {
-          URL.revokeObjectURL(pdfUrl);
-        }, 2000);
+        // Wait for content to load, then print
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+        
+        toast({
+          title: "Success",
+          description: "Ticket opened in new window for printing",
+        });
+      } else {
+        // Fallback: create downloadable HTML file
+        const blob = new Blob([ticketHTML], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `exhibition-ticket-${ticket.ticket_code}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Download Started",
+          description: "Ticket downloaded as HTML file",
+        });
       }
 
     } catch (error) {
       console.error("Error generating ticket:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      console.error("Full error details:", error);
-      
       toast({
         title: "Error",
-        description: `Failed to generate ticket: ${errorMessage}`,
+        description: "Failed to generate ticket. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -265,7 +330,7 @@ const AdminTickets = () => {
                             variant="outline" 
                             size="sm"
                             className="bg-blue-50 text-blue-600 hover:bg-blue-100"
-                            onClick={() => handlePrintTicket(ticket.id)}
+                            onClick={() => generateTicketPDF(ticket)}
                             disabled={generatingTicket === ticket.id}
                           >
                             {generatingTicket === ticket.id ? 'Generating...' : 'Print'}
@@ -289,7 +354,7 @@ const AdminTickets = () => {
                   size="sm" 
                   variant="outline"
                   className="bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  onClick={() => handlePrintTicket(selectedTicket.id)}
+                  onClick={() => generateTicketPDF(selectedTicket)}
                   disabled={generatingTicket === selectedTicket.id}
                 >
                   {generatingTicket === selectedTicket.id ? 'Generating...' : 'Print Ticket'}
