@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { RecommendationEngine } from '@/services/recommendationService';
 import ArtworkCard from '@/components/ArtworkCard';
 import { Artwork } from '@/types';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
 
 type UserOrder = {
   id: string;
@@ -157,161 +157,107 @@ const Profile = () => {
   const generateTicketPDF = (booking: UserBooking) => {
     try {
       setGeneratingTicket(booking.id);
-      console.log(`Generating ticket for booking: ${booking.id}`);
+      console.log(`Generating PDF ticket for booking: ${booking.id}`);
       
-      // Create HTML content for the ticket
-      const ticketHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Exhibition Ticket</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              margin: 20px; 
-              background: #f5f5f5;
-            }
-            .ticket {
-              background: white;
-              border: 2px solid #333;
-              border-radius: 10px;
-              padding: 30px;
-              max-width: 600px;
-              margin: 0 auto;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            }
-            .header {
-              text-align: center;
-              border-bottom: 2px dashed #333;
-              padding-bottom: 20px;
-              margin-bottom: 20px;
-            }
-            .title {
-              font-size: 24px;
-              font-weight: bold;
-              color: #333;
-              margin-bottom: 10px;
-            }
-            .details {
-              margin: 20px 0;
-            }
-            .detail-row {
-              display: flex;
-              justify-content: space-between;
-              margin: 10px 0;
-              padding: 5px 0;
-              border-bottom: 1px solid #eee;
-            }
-            .label {
-              font-weight: bold;
-              color: #666;
-            }
-            .value {
-              color: #333;
-            }
-            .ticket-code {
-              text-align: center;
-              font-size: 18px;
-              font-weight: bold;
-              background: #f0f0f0;
-              padding: 15px;
-              border-radius: 5px;
-              margin: 20px 0;
-              letter-spacing: 2px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 2px dashed #333;
-              color: #666;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="ticket">
-            <div class="header">
-              <div class="title">EXHIBITION TICKET</div>
-              <div>Gallery Management System</div>
-            </div>
-            
-            <div class="details">
-              <div class="detail-row">
-                <span class="label">User:</span>
-                <span class="value">${currentUser.name}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Exhibition:</span>
-                <span class="value">${booking.exhibitionTitle}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Booking Date:</span>
-                <span class="value">${formatDate(booking.date)}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Slots:</span>
-                <span class="value">${booking.slots}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Status:</span>
-                <span class="value">${booking.status.toUpperCase()}</span>
-              </div>
-            </div>
-            
-            <div class="ticket-code">
-              TICKET-${String(booking.id).toUpperCase()}
-            </div>
-            
-            <div class="footer">
-              <p>Please present this ticket at the exhibition entrance</p>
-              <p>Generated on ${format(new Date(), 'MMMM do, yyyy h:mm a')}</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      // Create a new window and print
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(ticketHTML);
-        printWindow.document.close();
-        printWindow.focus();
-        
-        // Wait for content to load, then print
-        printWindow.onload = () => {
-          printWindow.print();
-        };
-        
-        toast({
-          title: "Success",
-          description: "Ticket opened in new window for printing",
-        });
-      } else {
-        // Fallback: create downloadable HTML file
-        const blob = new Blob([ticketHTML], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `exhibition-ticket-${booking.id}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        toast({
-          title: "Download Started",
-          description: "Ticket downloaded as HTML file",
-        });
-      }
+      // Create new PDF document
+      const doc = new jsPDF();
+      
+      // Set font and colors
+      doc.setFont('helvetica');
+      
+      // Title
+      doc.setFontSize(24);
+      doc.setTextColor(0, 0, 0);
+      doc.text('EXHIBITION TICKET', 105, 30, { align: 'center' });
+      
+      // Subtitle
+      doc.setFontSize(12);
+      doc.text('Gallery Management System', 105, 40, { align: 'center' });
+      
+      // Draw border
+      doc.rect(20, 50, 170, 120);
+      
+      // Ticket details
+      doc.setFontSize(14);
+      doc.setTextColor(51, 51, 51);
+      
+      let yPosition = 70;
+      const lineHeight = 15;
+      
+      // User name
+      doc.setFontSize(12);
+      doc.setTextColor(102, 102, 102);
+      doc.text('User:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(currentUser.name, 70, yPosition);
+      yPosition += lineHeight;
+      
+      // Exhibition title
+      doc.setTextColor(102, 102, 102);
+      doc.text('Exhibition:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(booking.exhibitionTitle, 70, yPosition);
+      yPosition += lineHeight;
+      
+      // Booking date
+      doc.setTextColor(102, 102, 102);
+      doc.text('Booking Date:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(formatDate(booking.date), 70, yPosition);
+      yPosition += lineHeight;
+      
+      // Location
+      doc.setTextColor(102, 102, 102);
+      doc.text('Location:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(booking.location, 70, yPosition);
+      yPosition += lineHeight;
+      
+      // Slots
+      doc.setTextColor(102, 102, 102);
+      doc.text('Slots:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(String(booking.slots), 70, yPosition);
+      yPosition += lineHeight;
+      
+      // Status
+      doc.setTextColor(102, 102, 102);
+      doc.text('Status:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(booking.status.toUpperCase(), 70, yPosition);
+      yPosition += 25;
+      
+      // Ticket code (centered and highlighted)
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      const ticketCode = `TICKET-${String(booking.id).toUpperCase()}`;
+      doc.text(ticketCode, 105, yPosition, { align: 'center' });
+      
+      // Draw rectangle around ticket code
+      const codeWidth = doc.getTextWidth(ticketCode);
+      doc.rect(105 - codeWidth/2 - 5, yPosition - 8, codeWidth + 10, 12);
+      
+      // Footer
+      yPosition += 30;
+      doc.setFontSize(10);
+      doc.setTextColor(102, 102, 102);
+      doc.text('Please present this ticket at the exhibition entrance', 105, yPosition, { align: 'center' });
+      doc.text(`Generated on ${format(new Date(), 'MMMM do, yyyy h:mm a')}`, 105, yPosition + 10, { align: 'center' });
+      
+      // Save the PDF
+      const fileName = `exhibition-ticket-${booking.id}.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: "Success",
+        description: "PDF ticket generated and downloaded successfully",
+      });
 
     } catch (error) {
-      console.error("Error generating ticket:", error);
+      console.error("Error generating PDF ticket:", error);
       toast({
         title: "Error",
-        description: "Failed to generate ticket. Please try again.",
+        description: "Failed to generate PDF ticket. Please try again.",
         variant: "destructive",
       });
     } finally {
