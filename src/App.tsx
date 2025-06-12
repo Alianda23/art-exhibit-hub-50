@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster";
@@ -11,7 +12,6 @@ import ArtistLayout from '@/components/ArtistLayout';
 // Pages
 import Index from '@/pages/Index';
 import Home from '@/pages/Home';
-import CorporatePage from '@/pages/CorporatePage';
 import ArtworksPage from '@/pages/ArtworksPage';
 import ArtworkDetail from '@/pages/ArtworkDetail';
 import ArtworkCheckout from '@/pages/ArtworkCheckout';
@@ -70,16 +70,6 @@ function App() {
                 </>
               } />
               
-              {/* Corporate page route */}
-              <Route path="/corporate" element={
-                <>
-                  <Navbar />
-                  <CorporatePage />
-                  <Footer />
-                  <ChatBot />
-                </>
-              } />
-              
               {/* Main routes with navbar */}
               <Route path="/artworks" element={
                 <>
@@ -89,7 +79,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/artworks/:id" element={
+              <Route path="/artwork/:id" element={
                 <>
                   <Navbar />
                   <ArtworkDetail />
@@ -97,7 +87,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/artworks/:id/checkout" element={
+              <Route path="/artwork/:id/checkout" element={
                 <>
                   <Navbar />
                   <ArtworkCheckout />
@@ -112,7 +102,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/exhibitions/:id" element={
+              <Route path="/exhibition/:id" element={
                 <>
                   <Navbar />
                   <ExhibitionDetail />
@@ -120,7 +110,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/exhibitions/:id/checkout" element={
+              <Route path="/exhibition/:id/checkout" element={
                 <>
                   <Navbar />
                   <ExhibitionCheckout />
