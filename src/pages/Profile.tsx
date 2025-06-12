@@ -6,11 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice, formatDate } from '@/utils/formatters';
 import { CalendarIcon, MapPinIcon, UserIcon, PhoneIcon, MailIcon, Loader2, Sparkles } from 'lucide-react';
-import { generateExhibitionTicket, authFetch, getAllArtworks } from '@/services/api';
+import { authFetch, getAllArtworks } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { RecommendationEngine } from '@/services/recommendationService';
 import ArtworkCard from '@/components/ArtworkCard';
 import { Artwork } from '@/types';
+import { format } from 'date-fns';
 
 type UserOrder = {
   id: string;
@@ -46,7 +47,7 @@ const Profile = () => {
   const [recommendedArtworks, setRecommendedArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
-  const [printingTicket, setPrintingTicket] = useState<string | null>(null);
+  const [generatingTicket, setGeneratingTicket] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('Profile: useEffect triggered for user:', currentUser?.id);
@@ -152,50 +153,168 @@ const Profile = () => {
     navigate('/');
   };
 
-  const handlePrintTicket = async (bookingId: string) => {
-    setPrintingTicket(bookingId);
+  const generateTicketPDF = (booking: UserBooking) => {
     try {
-      console.log(`Generating ticket for booking: ${bookingId}`);
-      const response = await generateExhibitionTicket(bookingId);
+      setGeneratingTicket(booking.id);
+      console.log(`Generating ticket for booking: ${booking.id}`);
       
-      if (response.ticketUrl) {
-        // Open ticket in new window/tab
-        window.open(response.ticketUrl, '_blank');
+      // Create HTML content for the ticket
+      const ticketHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Exhibition Ticket</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              background: #f5f5f5;
+            }
+            .ticket {
+              background: white;
+              border: 2px solid #333;
+              border-radius: 10px;
+              padding: 30px;
+              max-width: 600px;
+              margin: 0 auto;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px dashed #333;
+              padding-bottom: 20px;
+              margin-bottom: 20px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: bold;
+              color: #333;
+              margin-bottom: 10px;
+            }
+            .details {
+              margin: 20px 0;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 10px 0;
+              padding: 5px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .label {
+              font-weight: bold;
+              color: #666;
+            }
+            .value {
+              color: #333;
+            }
+            .ticket-code {
+              text-align: center;
+              font-size: 18px;
+              font-weight: bold;
+              background: #f0f0f0;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+              letter-spacing: 2px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 2px dashed #333;
+              color: #666;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <div class="header">
+              <div class="title">EXHIBITION TICKET</div>
+              <div>Gallery Management System</div>
+            </div>
+            
+            <div class="details">
+              <div class="detail-row">
+                <span class="label">User:</span>
+                <span class="value">${currentUser.name}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Exhibition:</span>
+                <span class="value">${booking.exhibitionTitle}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Booking Date:</span>
+                <span class="value">${formatDate(booking.date)}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Slots:</span>
+                <span class="value">${booking.slots}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Status:</span>
+                <span class="value">${booking.status.toUpperCase()}</span>
+              </div>
+            </div>
+            
+            <div class="ticket-code">
+              TICKET-${booking.id.toUpperCase()}
+            </div>
+            
+            <div class="footer">
+              <p>Please present this ticket at the exhibition entrance</p>
+              <p>Generated on ${format(new Date(), 'MMMM do, yyyy h:mm a')}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Create a new window and print
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+        printWindow.focus();
+        
+        // Wait for content to load, then print
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+        
         toast({
           title: "Success",
-          description: "Ticket generated successfully!",
-        });
-      } else if (response.ticketData) {
-        // Handle PDF data if returned as base64 or blob
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head><title>Exhibition Ticket</title></head>
-              <body>
-                <iframe src="data:application/pdf;base64,${response.ticketData}" 
-                        width="100%" height="100%" frameborder="0">
-                </iframe>
-              </body>
-            </html>
-          `);
-        }
-        toast({
-          title: "Success",
-          description: "Ticket generated successfully!",
+          description: "Ticket opened in new window for printing",
         });
       } else {
-        throw new Error('No ticket data received');
+        // Fallback: create downloadable HTML file
+        const blob = new Blob([ticketHTML], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `exhibition-ticket-${booking.id}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Download Started",
+          description: "Ticket downloaded as HTML file",
+        });
       }
+
     } catch (error) {
-      console.error('Error generating ticket:', error);
+      console.error("Error generating ticket:", error);
       toast({
         title: "Error",
         description: "Failed to generate ticket. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
-      setPrintingTicket(null);
+      setGeneratingTicket(null);
     }
   };
 
@@ -313,10 +432,10 @@ const Profile = () => {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              onClick={() => handlePrintTicket(booking.id)}
-                              disabled={printingTicket === booking.id}
+                              onClick={() => generateTicketPDF(booking)}
+                              disabled={generatingTicket === booking.id}
                             >
-                              {printingTicket === booking.id ? (
+                              {generatingTicket === booking.id ? (
                                 <>
                                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                   Generating...
