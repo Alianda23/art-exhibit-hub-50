@@ -656,6 +656,19 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json_dumps(response).encode())
             return
         
+        # Add 2FA endpoints for backward compatibility (though not used)
+        elif path == '/send-2fa-code':
+            # Return success for backward compatibility
+            self._set_response(200)
+            self.wfile.write(json_dumps({"success": True, "message": "2FA disabled"}).encode())
+            return
+            
+        elif path == '/verify-2fa':
+            # Return success for backward compatibility
+            self._set_response(200)
+            self.wfile.write(json_dumps({"verified": True}).encode())
+            return
+        
         # Create artwork (admin or artist)
         elif path == '/artworks':
             auth_header = self.headers.get('Authorization', '')
