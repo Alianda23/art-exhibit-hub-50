@@ -66,39 +66,44 @@ const Login = () => {
     try {
       console.log("Attempting login with:", { email });
       
-      // First, validate credentials without logging in
-      const response = await fetch('http://localhost:8000/validate-credentials', {
+      // Try to login directly first to see if credentials are valid
+      console.log("Testing direct login first...");
+      const directLoginResponse = await fetch('http://localhost:8000/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email,
-          password,
-          userType: 'user'
+          password
         }),
       });
 
-      const data = await response.json();
+      const directLoginData = await directLoginResponse.json();
+      console.log("Direct login response:", directLoginData);
       
-      if (data.valid) {
-        // Credentials are valid, send 2FA code
-        await sendTwoFactorCode(email, 'user');
-        setPendingCredentials({ email, password });
-        setShowTwoFactor(true);
-        
-        toast({
-          title: "Verification Code Sent",
-          description: "Please check your email for the verification code.",
-        });
-      } else {
+      if (directLoginData.error) {
+        console.log("Direct login failed:", directLoginData.error);
         setError("Invalid email or password");
         toast({
-          title: "Error",
+          title: "Error", 
           description: "Invalid email or password",
           variant: "destructive",
         });
+        return;
       }
+      
+      // If direct login works, proceed with 2FA flow
+      console.log("Direct login successful, now sending 2FA code...");
+      await sendTwoFactorCode(email, 'user');
+      setPendingCredentials({ email, password });
+      setShowTwoFactor(true);
+      
+      toast({
+        title: "Verification Code Sent",
+        description: "Please check your email for the verification code.",
+      });
+      
     } catch (error) {
       console.error("Login error:", error);
       setError("Connection error. Please try again later.");
