@@ -1,16 +1,32 @@
 
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isArtist, logout } from '@/services/api';
-import { Button } from '@/components/ui/button';
 import { User, LogOut, PlusCircle, ShoppingBag, Image } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 
 interface ArtistLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const ArtistLayout: React.FC<ArtistLayoutProps> = ({ children }) => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const currentPath = location.pathname;
   
   // Check if user is an artist
   React.useEffect(() => {
@@ -24,74 +40,81 @@ const ArtistLayout: React.FC<ArtistLayoutProps> = ({ children }) => {
     navigate('/artist-login');
   };
 
+  const menuItems = [
+    {
+      title: "Dashboard",
+      url: "/artist",
+      icon: User,
+    },
+    {
+      title: "My Artworks",
+      url: "/artist/artworks",
+      icon: Image,
+    },
+    {
+      title: "Add Artwork",
+      url: "/artist/add-artwork",
+      icon: PlusCircle,
+    },
+    {
+      title: "Orders",
+      url: "/artist/orders",
+      icon: ShoppingBag,
+    },
+  ];
+
   return (
-    <div className="min-h-screen flex">
-      {/* Sidebar */}
-      <div className="bg-gray-900 text-white w-64 flex-shrink-0">
-        <div className="p-4">
-          <h1 className="text-2xl font-bold">Artist Portal</h1>
-        </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <Sidebar>
+          <SidebarHeader>
+            <div className="p-4">
+              <h1 className="text-xl font-bold text-sidebar-foreground">Artist Portal</h1>
+            </div>
+          </SidebarHeader>
+          
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {menuItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                        <Link to={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <LogOut />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
         
-        <nav className="mt-8">
-          <ul className="space-y-2">
-            <li>
-              <Link 
-                to="/artist" 
-                className="block px-4 py-3 hover:bg-gray-800 transition-colors flex items-center"
-              >
-                <User className="mr-3 h-5 w-5" />
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/artist/artworks" 
-                className="block px-4 py-3 hover:bg-gray-800 transition-colors flex items-center"
-              >
-                <Image className="mr-3 h-5 w-5" />
-                My Artworks
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/artist/add-artwork" 
-                className="block px-4 py-3 hover:bg-gray-800 transition-colors flex items-center"
-              >
-                <PlusCircle className="mr-3 h-5 w-5" />
-                Add Artwork
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/artist/orders" 
-                className="block px-4 py-3 hover:bg-gray-800 transition-colors flex items-center"
-              >
-                <ShoppingBag className="mr-3 h-5 w-5" />
-                Orders
-              </Link>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="absolute bottom-0 w-64 p-4">
-          <Button 
-            onClick={handleLogout}
-            variant="ghost" 
-            className="w-full justify-start text-white hover:bg-gray-800"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+          </header>
+          <main className="flex-1 p-6">
+            {children}
+          </main>
+        </SidebarInset>
       </div>
-      
-      {/* Main content */}
-      <div className="flex-1 overflow-x-auto bg-gray-50">
-        <main className="p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
