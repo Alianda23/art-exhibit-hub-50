@@ -46,6 +46,7 @@ const Profile = () => {
   const [recommendedArtworks, setRecommendedArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [printingTicket, setPrintingTicket] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('Profile: useEffect triggered for user:', currentUser?.id);
@@ -152,12 +153,39 @@ const Profile = () => {
   };
 
   const handlePrintTicket = async (bookingId: string) => {
+    setPrintingTicket(bookingId);
     try {
+      console.log(`Generating ticket for booking: ${bookingId}`);
       const response = await generateExhibitionTicket(bookingId);
+      
       if (response.ticketUrl) {
+        // Open ticket in new window/tab
         window.open(response.ticketUrl, '_blank');
+        toast({
+          title: "Success",
+          description: "Ticket generated successfully!",
+        });
+      } else if (response.ticketData) {
+        // Handle PDF data if returned as base64 or blob
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head><title>Exhibition Ticket</title></head>
+              <body>
+                <iframe src="data:application/pdf;base64,${response.ticketData}" 
+                        width="100%" height="100%" frameborder="0">
+                </iframe>
+              </body>
+            </html>
+          `);
+        }
+        toast({
+          title: "Success",
+          description: "Ticket generated successfully!",
+        });
       } else {
-        throw new Error('Failed to generate ticket');
+        throw new Error('No ticket data received');
       }
     } catch (error) {
       console.error('Error generating ticket:', error);
@@ -166,6 +194,8 @@ const Profile = () => {
         description: "Failed to generate ticket. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setPrintingTicket(null);
     }
   };
 
@@ -284,8 +314,16 @@ const Profile = () => {
                               size="sm" 
                               variant="outline" 
                               onClick={() => handlePrintTicket(booking.id)}
+                              disabled={printingTicket === booking.id}
                             >
-                              Print Ticket
+                              {printingTicket === booking.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Generating...
+                                </>
+                              ) : (
+                                'Print Ticket'
+                              )}
                             </Button>
                           </div>
                         </div>
