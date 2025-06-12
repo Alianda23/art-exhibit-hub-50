@@ -89,7 +89,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/artwork/:id" element={
+              <Route path="/artworks/:id" element={
                 <>
                   <Navbar />
                   <ArtworkDetail />
@@ -97,7 +97,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/artwork/:id/checkout" element={
+              <Route path="/artworks/:id/checkout" element={
                 <>
                   <Navbar />
                   <ArtworkCheckout />
@@ -112,7 +112,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/exhibition/:id" element={
+              <Route path="/exhibitions/:id" element={
                 <>
                   <Navbar />
                   <ExhibitionDetail />
@@ -120,7 +120,7 @@ function App() {
                   <ChatBot />
                 </>
               } />
-              <Route path="/exhibition/:id/checkout" element={
+              <Route path="/exhibitions/:id/checkout" element={
                 <>
                   <Navbar />
                   <ExhibitionCheckout />
