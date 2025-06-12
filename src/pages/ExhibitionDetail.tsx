@@ -74,7 +74,7 @@ const ExhibitionDetail = () => {
       return;
     }
     
-    navigate(`/checkout/exhibition/${id}?slots=${slots}`);
+    navigate(`/exhibitions/${id}/checkout?slots=${slots}`);
   };
 
   if (loading) {

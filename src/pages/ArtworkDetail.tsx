@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -67,7 +66,7 @@ const ArtworkDetail = () => {
       return;
     }
     
-    navigate(`/checkout/artwork/${id}`);
+    navigate(`/artworks/${id}/checkout`);
   };
 
   if (loading) {
