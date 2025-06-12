@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -37,6 +36,7 @@ const AdminTickets = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [generatingTicket, setGeneratingTicket] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin()) {
@@ -71,26 +71,91 @@ const AdminTickets = () => {
 
   const handlePrintTicket = async (bookingId: string) => {
     try {
+      setGeneratingTicket(bookingId);
       console.log(`Generating ticket for booking: ${bookingId}`);
+      
       const response = await generateExhibitionTicket(bookingId);
       console.log("Ticket generation response:", response);
       
-      // Check if response has the expected structure
-      if (response && response.pdfData) {
-        const pdfBlob = new Blob([response.pdfData], { type: 'application/pdf' });
-        const pdfUrl = URL.createObjectURL(pdfBlob);
+      // Check for different possible response formats
+      if (response) {
+        let pdfData = null;
         
-        window.open(pdfUrl, '_blank');
+        // Handle different response formats
+        if (response.pdfData) {
+          pdfData = response.pdfData;
+        } else if (response.pdf) {
+          pdfData = response.pdf;
+        } else if (response.data) {
+          pdfData = response.data;
+        } else if (typeof response === 'string') {
+          // Response might be base64 string directly
+          pdfData = response;
+        }
         
-        toast({
-          title: "Success",
-          description: "Ticket generated successfully",
-        });
+        if (pdfData) {
+          try {
+            // Try to create blob from different data formats
+            let blob;
+            
+            if (typeof pdfData === 'string') {
+              // Assume it's base64 encoded
+              const binaryString = atob(pdfData);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              blob = new Blob([bytes], { type: 'application/pdf' });
+            } else {
+              // Assume it's already binary data
+              blob = new Blob([pdfData], { type: 'application/pdf' });
+            }
+            
+            const pdfUrl = URL.createObjectURL(blob);
+            console.log('Created PDF URL:', pdfUrl);
+            
+            // Open in new window
+            const newWindow = window.open(pdfUrl, '_blank');
+            if (!newWindow) {
+              // If popup was blocked, try download instead
+              const link = document.createElement('a');
+              link.href = pdfUrl;
+              link.download = `ticket-${bookingId}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+            
+            // Clean up the URL after a delay
+            setTimeout(() => {
+              URL.revokeObjectURL(pdfUrl);
+            }, 1000);
+            
+            toast({
+              title: "Success",
+              description: "Ticket generated and opened successfully",
+            });
+          } catch (blobError) {
+            console.error("Error creating PDF blob:", blobError);
+            toast({
+              title: "Error",
+              description: "Failed to process PDF data",
+              variant: "destructive",
+            });
+          }
+        } else {
+          console.error("No PDF data found in response:", response);
+          toast({
+            title: "Error",
+            description: "No PDF data received from server",
+            variant: "destructive",
+          });
+        }
       } else {
-        console.error("Invalid response format:", response);
+        console.error("Empty response from server");
         toast({
           title: "Error",
-          description: "Invalid response format from server",
+          description: "Empty response from server",
           variant: "destructive",
         });
       }
@@ -98,9 +163,11 @@ const AdminTickets = () => {
       console.error("Error generating ticket:", error);
       toast({
         title: "Error",
-        description: "Failed to generate ticket. Please try again.",
+        description: `Failed to generate ticket: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
+    } finally {
+      setGeneratingTicket(null);
     }
   };
 
@@ -200,8 +267,9 @@ const AdminTickets = () => {
                             size="sm"
                             className="bg-blue-50 text-blue-600 hover:bg-blue-100"
                             onClick={() => handlePrintTicket(ticket.id)}
+                            disabled={generatingTicket === ticket.id}
                           >
-                            Print
+                            {generatingTicket === ticket.id ? 'Generating...' : 'Print'}
                           </Button>
                         </div>
                       </TableCell>
@@ -223,8 +291,9 @@ const AdminTickets = () => {
                   variant="outline"
                   className="bg-blue-50 text-blue-600 hover:bg-blue-100"
                   onClick={() => handlePrintTicket(selectedTicket.id)}
+                  disabled={generatingTicket === selectedTicket.id}
                 >
-                  Print Ticket
+                  {generatingTicket === selectedTicket.id ? 'Generating...' : 'Print Ticket'}
                 </Button>
               </div>
               
