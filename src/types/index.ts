@@ -61,6 +61,8 @@ export interface ExhibitionBooking {
   paymentStatus: 'pending' | 'completed' | 'failed';
   bookingDate: string;
   totalAmount: number;
+  exhibition_start_date?: string;
+  exhibition_end_date?: string;
 }
 
 export interface ContactMessage {

@@ -26,7 +26,8 @@ interface Ticket {
   exhibition_id: string;
   exhibition_title: string;
   exhibition_image_url?: string;
-  exhibition_date?: string;
+  exhibition_start_date?: string;
+  exhibition_end_date?: string;
   booking_date: string;
   ticket_code: string;
   slots: number;
@@ -166,8 +167,12 @@ const AdminTickets = () => {
                 <span class="value">${ticket.exhibition_title}</span>
               </div>
               <div class="detail-row">
-                <span class="label">Exhibition Date:</span>
-                <span class="value">${ticket.exhibition_date ? format(new Date(ticket.exhibition_date), 'MMMM do, yyyy h:mm a') : 'TBD'}</span>
+                <span class="label">Exhibition Start Date:</span>
+                <span class="value">${ticket.exhibition_start_date ? format(new Date(ticket.exhibition_start_date), 'MMMM do, yyyy h:mm a') : 'TBD'}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Exhibition End Date:</span>
+                <span class="value">${ticket.exhibition_end_date ? format(new Date(ticket.exhibition_end_date), 'MMMM do, yyyy h:mm a') : 'TBD'}</span>
               </div>
               <div class="detail-row">
                 <span class="label">Booking Date:</span>
@@ -423,9 +428,13 @@ const AdminTickets = () => {
                     <p className="text-sm text-gray-500">Booking Date:</p>
                     <p>{format(new Date(selectedTicket.booking_date), 'PPP p')}</p>
                   </div>
-                   <div>
-                    <p className="text-sm text-gray-500">Exhibition Date:</p>
-                    <p>{selectedTicket.exhibition_date ? format(new Date(selectedTicket.exhibition_date), 'PPP p') : 'TBD'}</p>
+                  <div>
+                    <p className="text-sm text-gray-500">Exhibition Start Date:</p>
+                    <p>{selectedTicket.exhibition_start_date ? format(new Date(selectedTicket.exhibition_start_date), 'PPP p') : 'TBD'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Exhibition End Date:</p>
+                    <p>{selectedTicket.exhibition_end_date ? format(new Date(selectedTicket.exhibition_end_date), 'PPP p') : 'TBD'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Slots:</p>

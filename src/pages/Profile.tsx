@@ -37,7 +37,8 @@ type UserBooking = {
   slots: number;
   totalAmount: number;
   status: string;
-  exhibition_date?: string;
+  exhibition_start_date?: string;
+  exhibition_end_date?: string;
   ticket_code?: string;
 };
 
@@ -202,11 +203,18 @@ const Profile = () => {
       doc.text(booking.exhibitionTitle, 70, yPosition);
       yPosition += lineHeight;
       
-      // Exhibition date
+      // Exhibition start date
       doc.setTextColor(102, 102, 102);
-      doc.text('Exhibition Date:', 30, yPosition);
+      doc.text('Exhibition Start Date:', 30, yPosition);
       doc.setTextColor(51, 51, 51);
-      doc.text(booking.exhibition_date ? formatDate(booking.exhibition_date) : 'TBD', 70, yPosition);
+      doc.text(booking.exhibition_start_date ? formatDate(booking.exhibition_start_date) : 'TBD', 70, yPosition);
+      yPosition += lineHeight;
+      
+      // Exhibition end date
+      doc.setTextColor(102, 102, 102);
+      doc.text('Exhibition End Date:', 30, yPosition);
+      doc.setTextColor(51, 51, 51);
+      doc.text(booking.exhibition_end_date ? formatDate(booking.exhibition_end_date) : 'TBD', 70, yPosition);
       yPosition += lineHeight;
       
       // Booking date

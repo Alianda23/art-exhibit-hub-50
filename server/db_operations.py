@@ -128,12 +128,13 @@ def get_all_tickets():
     cursor = connection.cursor()
     
     try:
-        # Get exhibition bookings
+        # Get exhibition bookings with start and end dates
         query = """
         SELECT eb.id, eb.user_id, u.name as user_name, eb.exhibition_id, 
                e.title as exhibition_title, e.image_url as exhibition_image_url,
                eb.booking_date, eb.ticket_code, eb.slots, eb.status,
-               eb.total_amount, eb.payment_status
+               eb.total_amount, eb.payment_status, e.start_date as exhibition_start_date,
+               e.end_date as exhibition_end_date
         FROM exhibition_bookings eb
         JOIN users u ON eb.user_id = u.id
         JOIN exhibitions e ON eb.exhibition_id = e.id
@@ -185,11 +186,12 @@ def get_user_orders(user_id):
         orders = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
         print(f"Found {len(orders)} artwork orders for user {user_id}")
         
-        # Get user's exhibition bookings
+        # Get user's exhibition bookings with start and end dates
         booking_query = """
         SELECT eb.id, eb.exhibition_id as exhibitionId, e.title as exhibitionTitle,
                eb.booking_date as date, e.location, eb.slots, eb.ticket_code,
-               eb.total_amount as totalAmount, eb.status, e.image_url
+               eb.total_amount as totalAmount, eb.status, e.image_url,
+               e.start_date as exhibition_start_date, e.end_date as exhibition_end_date
         FROM exhibition_bookings eb
         JOIN exhibitions e ON eb.exhibition_id = e.id
         WHERE eb.user_id = %s
