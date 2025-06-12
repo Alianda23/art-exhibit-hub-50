@@ -75,83 +75,94 @@ const AdminTickets = () => {
       console.log(`Generating ticket for booking: ${bookingId}`);
       
       const response = await generateExhibitionTicket(bookingId);
-      console.log("Ticket generation response:", response);
+      console.log("Raw ticket generation response:", response);
+      console.log("Response type:", typeof response);
       
       if (!response) {
-        throw new Error("No response from server");
+        throw new Error("No response received from server");
       }
 
-      // Handle the PDF data - look for common response formats
-      let pdfData = response.pdfData || response.pdf || response.data || response;
-      
-      if (!pdfData) {
-        throw new Error("No PDF data found in response");
-      }
-
-      console.log("PDF data type:", typeof pdfData);
-      console.log("PDF data length:", pdfData.length || 0);
-
-      // Create blob directly from the response
       let blob;
-      if (typeof pdfData === 'string') {
-        // Handle base64 string
+      
+      // Handle different response formats
+      if (response instanceof Blob) {
+        console.log("Response is already a Blob");
+        blob = response;
+      } else if (response instanceof ArrayBuffer) {
+        console.log("Response is ArrayBuffer, converting to Blob");
+        blob = new Blob([response], { type: 'application/pdf' });
+      } else if (typeof response === 'string') {
+        console.log("Response is string, treating as base64");
         try {
-          const binaryString = atob(pdfData);
+          // Remove data URL prefix if present
+          const base64Data = response.replace(/^data:application\/pdf;base64,/, '');
+          const binaryString = atob(base64Data);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
           }
           blob = new Blob([bytes], { type: 'application/pdf' });
         } catch (e) {
-          console.error("Error decoding base64:", e);
-          throw new Error("Invalid PDF data format");
+          console.error("Failed to decode base64 string:", e);
+          throw new Error("Invalid PDF format - could not decode base64 data");
         }
-      } else if (pdfData instanceof ArrayBuffer || pdfData instanceof Uint8Array) {
-        // Handle binary data
-        blob = new Blob([pdfData], { type: 'application/pdf' });
+      } else if (response.data) {
+        console.log("Response has data property, processing...");
+        return handlePrintTicket(bookingId); // Recursive call with response.data
       } else {
-        throw new Error("Unsupported PDF data format");
+        console.error("Unexpected response format:", response);
+        throw new Error("Invalid PDF format - unexpected response type");
       }
 
-      // Verify blob size
-      if (blob.size === 0) {
-        throw new Error("Generated PDF is empty");
+      // Validate blob
+      if (!blob || blob.size === 0) {
+        throw new Error("Generated PDF is empty or invalid");
       }
 
-      console.log("Created PDF blob, size:", blob.size);
+      console.log("PDF blob created successfully, size:", blob.size, "bytes");
 
+      // Create object URL and try to open/download
       const pdfUrl = URL.createObjectURL(blob);
-      console.log('Created PDF URL:', pdfUrl);
       
-      // Try to open in new window first
-      const newWindow = window.open(pdfUrl, '_blank');
-      
-      // If popup was blocked, download instead
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        console.log("Popup blocked, downloading instead");
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = `ticket-${bookingId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      try {
+        // Try opening in new window first
+        const newWindow = window.open(pdfUrl, '_blank');
+        
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          console.log("Popup blocked, downloading instead");
+          // Fallback to download
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = `exhibition-ticket-${bookingId}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Download Started",
+            description: "Ticket is being downloaded to your device",
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Ticket opened in new window",
+          });
+        }
+      } finally {
+        // Clean up the object URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(pdfUrl);
+        }, 2000);
       }
-      
-      // Clean up URL after delay
-      setTimeout(() => {
-        URL.revokeObjectURL(pdfUrl);
-      }, 1000);
-      
-      toast({
-        title: "Success",
-        description: "Ticket generated successfully",
-      });
 
     } catch (error) {
       console.error("Error generating ticket:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("Full error details:", error);
+      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate ticket",
+        description: `Failed to generate ticket: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
