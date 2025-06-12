@@ -75,30 +75,20 @@ const AdminTickets = () => {
       const response = await generateExhibitionTicket(bookingId);
       console.log("Ticket generation response:", response);
       
-      // Check if response has the expected structure
-      if (response && response.pdfData) {
-        const pdfBlob = new Blob([response.pdfData], { type: 'application/pdf' });
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        
-        window.open(pdfUrl, '_blank');
-        
-        toast({
-          title: "Success",
-          description: "Ticket generated successfully",
-        });
-      } else {
-        console.error("Invalid response format:", response);
-        toast({
-          title: "Error",
-          description: "Invalid response format from server",
-          variant: "destructive",
-        });
-      }
+      const pdfBlob = new Blob([response.pdfData], { type: 'application/pdf' });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      window.open(pdfUrl, '_blank');
+      
+      toast({
+        title: "Success",
+        description: "Ticket generated successfully",
+      });
     } catch (error) {
       console.error("Error generating ticket:", error);
       toast({
         title: "Error",
-        description: "Failed to generate ticket. Please try again.",
+        description: "Failed to generate ticket",
         variant: "destructive",
       });
     }
@@ -180,9 +170,9 @@ const AdminTickets = () => {
                     <TableRow key={ticket.id}>
                       <TableCell>{ticket.user_name}</TableCell>
                       <TableCell>{ticket.exhibition_title}</TableCell>
-                      <TableCell>{format(new Date(ticket.booking_date), 'PPP p')}</TableCell>
+                      <TableCell>{formatDate(ticket.booking_date)}</TableCell>
                       <TableCell>
-                        <Badge className={ticket.status === 'active' ? 'bg-green-500' : ticket.status === 'used' ? 'bg-yellow-500' : 'bg-red-500'}>
+                        <Badge className={getStatusColor(ticket.status)}>
                           {ticket.status.toUpperCase()}
                         </Badge>
                       </TableCell>
@@ -253,7 +243,7 @@ const AdminTickets = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Booking Date:</p>
-                    <p>{format(new Date(selectedTicket.booking_date), 'PPP p')}</p>
+                    <p>{formatDate(selectedTicket.booking_date)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Slots:</p>
@@ -265,7 +255,7 @@ const AdminTickets = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Status:</p>
-                    <Badge className={selectedTicket.status === 'active' ? 'bg-green-500' : selectedTicket.status === 'used' ? 'bg-yellow-500' : 'bg-red-500'}>
+                    <Badge className={getStatusColor(selectedTicket.status)}>
                       {selectedTicket.status.toUpperCase()}
                     </Badge>
                   </div>
